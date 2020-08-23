@@ -3,7 +3,7 @@
     "description": "Simplestart Library For Thinkphp V6.0 ",
     "version": "v1.0.0",
     "type": "library",
-    "license": "Apache 2.0 License",
+    "license": "Apache-2.0",
     "authors": [
         {
             "name": "Colber.Dun",
