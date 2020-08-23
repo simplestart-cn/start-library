@@ -1,0 +1,240 @@
+<?php
+
+// +----------------------------------------------------------------------
+// | Simplestart Library
+// +----------------------------------------------------------------------
+// | 版权所有: http://www.simplestart.cn copyright 2020
+// +----------------------------------------------------------------------
+// | 开源协议: https://www.apache.org/licenses/LICENSE-2.0.txt
+// +----------------------------------------------------------------------
+// | 仓库地址: https://github.com/simplestart-cn/start-library
+// +----------------------------------------------------------------------
+
+namespace start\service;
+
+use start\extend\DataExtend;
+use start\Service;
+use think\facade\Db;
+
+/**
+ * 系统菜单管理服务
+ * Class MenuService
+ * @package app\admin\service
+ */
+class MenuService extends Service
+{
+
+    public $model = 'start\model\Menu';
+
+    /**
+     * 获取可选菜单节点
+     * @param  array  $filter  [description]
+     * @param  array  $with    [description]
+     * @param  array  $order   [description]
+     * @param  [type] $calback [description]
+     * @return [type]          [description]
+     */
+    public static function getList($filter = [], $with = [], $order = [], $calback = null)
+    {
+        $model = self::model();
+        $list = $model->order('sort desc,id asc')->select();
+        $menus = array();
+        foreach ($list as $item) {
+            // 权限过滤
+            if (AuthService::instance()->check($item['node'])){
+               array_push($menus, $item);
+            }
+        }
+        return $menus;
+    }
+
+    /**
+     * 获取菜单树数据
+     * @return [type] [description]
+     */
+    public static function getTree()
+    { 
+        $self = self::instance();
+        $menus = $self->model->where(['status' => '1'])->order('sort desc,id asc')->select();
+        $menus = DataExtend::arr2tree($menus->toArray());
+        if(count($menus) == 1 && isset($menus[0]['children'])){
+            $menus = $menus[0]['children'];
+        }
+        return $self->formatData($menus);
+    }
+
+    /**
+     * 获取菜应用菜单
+     * @return [type] [description]
+     */
+    public static function getAppMenu()
+    { 
+        $self = self::instance();
+        $data = $self->model->where(['status' => '1'])->order('sort desc,id asc')->select();
+        $data = DataExtend::arr2tree($data->toArray());
+        $apps = array();
+        $menus = array();
+        foreach ($data as $item) {
+            $menus = array_merge($menus, $item['children']);
+            unset($item['children']);
+            array_push($apps, $item);
+        }
+        $menus =  $self->formatData($menus);
+        return compact('apps','menus');
+    }
+
+    /**
+     * 菜单格式化
+     * @param  [type] $data [description]
+     * @return [type]       [description]
+     */
+    final private function formatData($menus)
+    {
+        $routers = [];
+        foreach ($menus as $key => $data) {
+            $temp              = [];
+            $temp['path']      = $data['path'];
+            $temp['component'] = $data['component'] ?: 'layout';
+            $temp['node']      = $data['node'];
+            if ($data['hidden'] > -1) {
+                $temp['hidden'] = (boolean)$data['hidden'];
+            }
+            if ($data['is_menu'] > -1) {
+                $temp['is_menu'] = (boolean)$data['is_menu'];
+            }
+            if ($data['no_cache'] > -1) {
+                $temp['meta']['noCache'] = (boolean)$data['no_cache'];
+            }
+            if ($data['redirect']) {
+                $temp['redirect'] = $data['redirect'];
+            }
+            // 路由参数拼接
+            if (!empty($data['params'])){
+                $temp['path'] .= $data['params'];
+            }
+            $temp['meta']['title'] = $data['title'];
+            $temp['meta']['icon']  = $data['icon'];
+
+            if(isset($data['children']) && count($data['children']) > 0){
+                foreach ($data['children'] as $c) {
+                    $temp['children'] = $this->formatData($data['children']);
+                }
+            }
+            // 权限过滤
+            if (AuthService::instance()->check($data['node'])){
+                $routers[] = $temp;
+            }
+        }
+        return $routers;
+    }
+
+    public static function save($input, $field = [])
+    {
+        if(isset($input['id']) && !empty($input['id'])){
+            $model = self::getInfo($input['id']);
+            $list = self::getList();
+            $ids = DataExtend::getArrSubIds($list, $input['id']);
+            if(count($ids) > 0 && isset($input['status'])){
+                self::saveChildren($ids, ['status' => $input['status']]);
+            }
+        }else{
+            $model = self::model();
+        }
+        return $model->allowField($field)->save($input);
+    }
+
+    /**
+     * 更新子菜单信息
+     * @param  [type] $pid   [description]
+     * @param  [type] $input [description]
+     * @return [type]        [description]
+     */
+    protected static function saveChildren($ids, $input, $field = [])
+    {
+        foreach ($ids as $id) {
+            $item = ['id' => $id];
+            foreach ($input as $key => $value) {
+                if($key !== 'id'){
+                    if(count($field) > 0){
+                        in_array($key, $field) && $item[$key] = $value;
+                    }else{
+                        $item[$key] = $value;
+                    }
+                    
+                }
+            }
+            $data[] = $item;
+        }
+        return self::model()->saveAll($data);
+    }
+
+    /**
+     * 构建菜单
+     * 并保留后台可编辑字段
+     * @return [type] [description]
+     */
+    public function building()
+    {
+        $nodes = NodeService::instance()->getAll(true);
+        $lastNodes = $this->model->select()->toArray();
+        foreach ($nodes as &$item) {
+            foreach ($lastNodes as $last) {
+                // 保留编辑过的字段
+                if($last['node'] == $item['node']){
+                    $item['id']        = $last['id'];
+                    $item['icon']      = $last['icon'];
+                    $item['sort']      = $last['sort'];
+                    $item['params']    = $last['params'];
+                    $item['component'] = $last['component'];
+                    $item['condition'] = $last['condition'];
+                    // 保留编辑过的上下级关系
+                    if($last['pid'] > 0){
+                        $p_key = array_search($last['pid'], array_column($lastNodes, 'id'));
+                        if($item['pnode'] !== $lastNodes[$p_key]['node']){
+                            $item['pnode'] = $lastNodes[$p_key]['node'];
+                        }
+                    }
+                }
+            }
+        }
+        return $this->saveBuilding(DataExtend::arr2tree($nodes, 'node', 'pnode', 'children'), 0);
+    }
+
+    /**
+     * 更新菜单信息
+     * @param  [type] $nodes [description]
+     * @return [type]        [description]
+     */
+    private function saveBuilding($nodes = [], $pid = 0)
+    {
+        $menus = array();
+        foreach ($nodes as $key => &$data) {
+            $temp                    = [];
+            $temp['pid']             = $pid;
+            $temp['title']           = $data['title'];
+            $temp['name']            = str_replace('/', '_' , $data['node']);
+            $temp['node']            = $data['node'];
+            $temp['path']            = '/'.$data['node'];
+            $temp['hidden']          = false;
+            $temp['is_menu']         = (boolean)$data['ismenu'];
+            $temp['component']       = isset($data['component']) ? $data['component'] : '';
+            $temp['redirect']        = isset($data['redirect']) ? $data['redirect'] : '';
+            $temp['icon']            = isset($data['icon']) ? $data['icon'] : '';
+            $temp['no_cache']        = isset($data['no_cache']) ? (boolean)$data['no_cache'] : false;
+            if(isset($data['id'])){
+                $model = $this->model->find($data['id']);
+                $model->where(['id' => $data['id']])->save($temp);
+            }else{
+                $model = new $this->model;
+                $model->save($temp);
+            }
+            if($model->id && isset($data['children']) && count($data['children']) > 0){
+                $temp['children'] = $this->saveBuilding($data['children'], $model->id);
+            }
+            $menus[] = $temp; 
+        }
+        return $menus;
+    }
+
+    
+}

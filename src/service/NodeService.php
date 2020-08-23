@@ -1,0 +1,206 @@
+<?php
+
+// +----------------------------------------------------------------------
+// | Simplestart Library
+// +----------------------------------------------------------------------
+// | 版权所有: http://www.simplestart.cn copyright 2020
+// +----------------------------------------------------------------------
+// | 开源协议: https://www.apache.org/licenses/LICENSE-2.0.txt
+// +----------------------------------------------------------------------
+// | 仓库地址: https://github.com/simplestart-cn/start-library
+// +----------------------------------------------------------------------
+
+namespace start\service;
+
+use start\extend\DataExtend;
+use start\Service;
+
+/**
+ * 应用节点服务管理
+ * Class NodeService
+ * @package start\service
+ */
+class NodeService extends Service
+{
+
+    public $model = 'start\model\Node';
+    
+    /**
+     * 驼峰转下划线规则
+     * @param string $name
+     * @return string
+     */
+    public function nameTolower($name)
+    {
+        $dots = [];
+        foreach (explode('.', strtr($name, '/', '.')) as $dot) {
+            $dots[] = trim(preg_replace("/[A-Z]/", "_\\0", $dot), "_");
+        }
+        return strtolower(join('.', $dots));
+    }
+
+    /**
+     * 获取当前节点内容
+     * @param string $type
+     * @return string
+     */
+    public function getCurrent($type = '')
+    {
+        $prefix = $this->app->getNamespace();
+        $middle = '\\' . $this->nameTolower($this->app->request->controller());
+        $suffix = ($type === 'controller') ? '' : ('\\' . $this->app->request->action());
+        return strtr(substr($prefix, stripos($prefix, '\\') + 1) . $middle . $suffix, '\\', '/');
+    }
+
+    /**
+     * 检查并完整节点内容
+     * @param string $node
+     * @return string
+     */
+    public function fullnode($node)
+    {
+        if (empty($node)) return $this->getCurrent();
+        if (count($attrs = explode('/', $node)) === 1) {
+            return $this->getCurrent('controller') . "/{$node}";
+        } else {
+            $attrs[1] = $this->nameTolower($attrs[1]);
+            return join('/', $attrs);
+        }
+    }
+
+    /**
+     * 获取节点列表
+     * @return [type] [description]
+     */
+    public function getAll($force = false)
+    {
+        list($nodes, $pnodes, $methods) = [[], [], array_reverse($this->getMethods($force))];
+        foreach ($methods as $node => $method) {
+            list($count, $pnode) = [substr_count($node, '/'), substr($node, 0, strripos($node, '/'))];
+            if ($count === 2 && (!empty($method['isauth']) || !empty($method['ismenu']))) {
+                in_array($pnode, $pnodes) or array_push($pnodes, $pnode);
+                $nodes[$node] = [
+                    'node' => $node,
+                    'title' => $method['title'],
+                    'pnode' => $pnode,
+                    'isauth' => $method['isauth'],
+                    'ismenu' => $method['ismenu'],
+                    'islogin' => $method['islogin']
+                ];
+            } elseif ($count === 1 && in_array($pnode, $pnodes)) {
+                $nodes[$node] = [
+                    'node' => $node,
+                    'title' => $method['title'],
+                    'pnode' => $pnode,
+                    'isauth' => $method['isauth'],
+                    'ismenu' => $method['ismenu'],
+                    'islogin' => $method['islogin']
+                ];
+            }
+        }
+        foreach (array_keys($nodes) as $key) foreach ($methods as $node => $method) if (stripos($key, "{$node}/") !== false) {
+            $pnode = substr($node, 0, strripos($node, '/'));
+            $nodes[$node] = [
+                'node' => $node,
+                'title' => $method['title'],
+                'pnode' => $pnode,
+                'isauth' => $method['isauth'],
+                'ismenu' => $method['ismenu'],
+                'islogin' => $method['islogin']
+            ];
+            $nodes[$pnode] = [
+                'node' => $pnode,
+                'title' => ucfirst($pnode),
+                'pnode' => '',
+                'isauth' => $method['isauth'],
+                'ismenu' => $method['ismenu'],
+                'islogin' => $method['islogin']
+            ];
+        }
+        return array_reverse($nodes);
+    }
+
+    /**
+     * 获取节点树
+     * @return [type] [description]
+     */
+    public function getTree($force = flase)
+    {
+        $nodes = $this->getAll($force);
+        return DataExtend::arr2tree($nodes, 'node', 'pnode', 'child');
+    }
+
+    /**
+     * 控制器方法扫描处理
+     * @param boolean $force
+     * @return array
+     * @throws \ReflectionException
+     */
+    public function getMethods($force = false)
+    {
+        static $data = [];
+        if (empty($force)) {
+            if (count($data) > 0) return $data;
+            $data = $this->app->cache->get('admin_auth_node', []);
+            if (count($data) > 0) return $data;
+        } else {
+            $data = [];
+        }
+        $ignores = get_class_methods('\start\Controller');
+        foreach ($this->_scanDirectory(dirname($this->app->getAppPath())) as $file) {
+            if (preg_match("|/(\w+)/(\w+)/controller/(.+)\.php$|i", $file, $matches)) {
+                list(, $namespace, $appname, $classname) = $matches;
+                $class = new \ReflectionClass(strtr("{$namespace}/{$appname}/controller/{$classname}", '/', '\\'));
+                $prefix = strtr("{$appname}/{$this->nameTolower($classname)}", '\\', '/');
+                $data[$prefix] = $this->_parseComment($class->getDocComment(), $classname);
+                foreach ($class->getMethods(\ReflectionMethod::IS_PUBLIC) as $method) {
+                    if (in_array($metname = $method->getName(), $ignores)) continue;
+                    $data["{$prefix}/{$metname}"] = $this->_parseComment($method->getDocComment(), $metname);
+                }
+            }
+        }
+        $data = array_change_key_case($data, CASE_LOWER);
+        $this->app->cache->set('admin_auth_node', $data);
+        return $data;
+    }
+
+    /**
+     * 解析硬节点属性
+     * @param string $comment
+     * @param string $default
+     * @return array
+     */
+    private function _parseComment($comment, $default = '')
+    {
+        $text = strtr($comment, "\n", ' ');
+        $title = preg_replace('/^\/\*\s*\*\s*\*\s*(.*?)\s*\*.*?$/', '$1', $text);
+        foreach (['@auth', '@menu', '@login'] as $find) if (stripos($title, $find) === 0) {
+            $title = $default;
+        }
+        return [
+            'title'   => $title ? $title : $default,
+            'isauth'  => intval(preg_match('/@auth\s*true/i', $text)),
+            'ismenu'  => intval(preg_match('/@menu\s*true/i', $text)),
+            'islogin' => intval(preg_match('/@login\s*true/i', $text)),
+        ];
+    }
+
+    /**
+     * 获取所有PHP文件列表
+     * @param string $path 扫描目录
+     * @param array $data 额外数据
+     * @param string $ext 有文件后缀
+     * @return array
+     */
+    private function _scanDirectory($path, $data = [], $ext = 'php')
+    {
+        foreach (glob("{$path}*") as $item) {
+            if (is_dir($item)) {
+                $data = array_merge($data, $this->_scanDirectory("{$item}/"));
+            } elseif (is_file($item) && pathinfo($item, PATHINFO_EXTENSION) === $ext) {
+                $data[] = strtr($item, '\\', '/');
+            }
+        }
+        return $data;
+    }
+}
