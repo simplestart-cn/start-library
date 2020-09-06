@@ -42,7 +42,7 @@ class Database extends Command
         if (in_array($action, ['repair', 'optimize'])) {
             return $this->{"_{$action}"}();
         }
-        $this->output->error("Wrong operation, currently allow repair|optimize");
+        $output->error("Wrong operation, currently allow repair|optimize");
     }
 
     /**

@@ -108,7 +108,7 @@ abstract class Service
      * @param  array  $filter [description]
      * @return [type]         [description]
      */
-    public static function getList($filter = [], $with = [])
+    public static function getList($filter = [], $with = [], $order=[])
     {
         $model = self::model();
         return $model->list($filter, $with);
@@ -120,7 +120,7 @@ abstract class Service
      * @param  array  $paging [description]
      * @return [type]         [description]
      */
-    public static function getPage($filter = [], $with = [], $paging = [])
+    public static function getPage($filter = [], $with = [], $order = [], $paging = [])
     {
         $model = self::model();
         return $model->page($filter, $with, [], $paging);
@@ -145,7 +145,12 @@ abstract class Service
     public static function save($input, $field = [])
     {
         $model = self::model();
-        return $model->allowField($field)->save($input);
+        $pk = $model->getPk();
+        if(isset($input[$pk])){
+            return $model->allowField($field)->update($input);
+        }else{
+            return $model->allowField($field)->save($input);
+        }
     }
 
     /**
