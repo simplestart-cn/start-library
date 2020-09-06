@@ -86,3 +86,11 @@ $string = encode($content);
 // 加密字符串解密
 $content = decode($string);
 ```
+#### 应用菜单构建
+```php
+// 构建全部应用菜单
+php think start:menu
+
+// 构建单个应用菜单
+php think start:menu [appName]
+```
