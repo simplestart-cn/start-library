@@ -62,7 +62,7 @@ class Model extends \think\Model
      */
     public function list($filter = [], $with = [], $order = [])
     {
-        return $this->where($filter)->with($with)->order($order)->select();
+        return $this->parseFilter($filter)->with($with)->order($order)->select();
     }
 
     /**
@@ -79,12 +79,12 @@ class Model extends \think\Model
             $paging = ['page' => (int)$paging];
         }
         if(!isset($paging['page'])){
-            $paging['page'] = input('per_page',1,'trim');
+            $paging['page'] = input('page',1,'trim');
         }
         if(!isset($paging['per_page'])){
             $paging['per_page'] = input('per_page',15,'trim');
         }
-        return $this->where($filter)->with($with)->order($order)->paginate($paging['per_page'], false, [
+        return $this->parseFilter($filter)->with($with)->order($order)->paginate($paging['per_page'], false, [
             'query' => array_merge(\request()->request() , $paging)
         ]);
     }
@@ -100,7 +100,7 @@ class Model extends \think\Model
         if(!is_array($filter)){
             return $this->with($with)->find($filter);
         }else{
-            return $this->where($filter)->with($with)->find();
+            return $this->parseFilter($filter)->with($with)->find();
         }
     }
 
@@ -113,6 +113,38 @@ class Model extends \think\Model
             return $this->save(['is_deleted' => 1]);
         }else{
             return $this->delete();
+        }
+    }
+
+    /**
+     * 解析查询条件
+     * @param  array  $filter [description]
+     * @return [type]         [description]
+     */
+    protected function parseFilter($filter=[])
+    {
+        if(empty($filter)) return $this;
+        if(!is_array($filter)){
+            return $this->where($filter);
+        }else{
+            $query = null;
+            foreach ($filter as $key => $value) {
+                if(is_array($value) && count($value) === 3){
+                    if(is_null($query)){
+                        $query = $this->where($value[0], $value[1], $value[2]);
+                    }else{
+                        $query = $query->where($value[0], $value[1], $value[2]);
+                    }
+                }else{
+                    if(is_null($query)){
+                        $query = $this->where($key, '=', $value);
+                    }else{
+                        $query = $query->where($key, '=', $value);
+                    }
+                    
+                }
+            }
+            return $query;
         }
     }
 

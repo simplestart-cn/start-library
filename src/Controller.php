@@ -191,7 +191,7 @@ abstract class Controller extends \stdClass
      * @param string $type 输入方式 ( post. 或 get. )
      * @return array
      */
-    protected function formValidate(array $rules, $type = '')
+    protected function formValidate(array $rules=[], $type = '')
     {
         return ValidateHelper::instance()->init($rules, $type);
     }

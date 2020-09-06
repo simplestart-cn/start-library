@@ -72,15 +72,14 @@ class MenuService extends Service
         $self = self::instance();
         $data = $self->model->where(['status' => '1'])->order('sort desc,id asc')->select();
         $data = DataExtend::arr2tree($data->toArray());
-        $apps = array();
-        $menus = array();
-        foreach ($data as $item) {
-            $menus = array_merge($menus, $item['children']);
-            unset($item['children']);
-            array_push($apps, $item);
+        $apps = $self->formatData($data);
+        $access = array();
+        foreach ($apps as $item) {
+            if(isset($item['children'])){
+                $access = array_merge($access, $item['children']);
+            }
         }
-        $menus =  $self->formatData($menus);
-        return compact('apps','menus');
+        return compact('apps','access');
     }
 
     /**
@@ -93,6 +92,7 @@ class MenuService extends Service
         $routers = [];
         foreach ($menus as $key => $data) {
             $temp              = [];
+            $temp['name']      = $data['name'];
             $temp['path']      = $data['path'];
             $temp['component'] = $data['component'] ?: 'layout';
             $temp['node']      = $data['node'];
@@ -173,13 +173,13 @@ class MenuService extends Service
      * 并保留后台可编辑字段
      * @return [type] [description]
      */
-    public function building()
+    public function building($app = '')
     {
-        $nodes = NodeService::instance()->getAll(true);
+        $nodes = NodeService::instance()->getAll($app, true);
         $lastNodes = $this->model->select()->toArray();
         foreach ($nodes as &$item) {
             foreach ($lastNodes as $last) {
-                // 保留编辑过的字段
+                // 保留可能编辑过的字段
                 if($last['node'] == $item['node']){
                     $item['id']        = $last['id'];
                     $item['icon']      = $last['icon'];
@@ -197,7 +197,8 @@ class MenuService extends Service
                 }
             }
         }
-        return $this->saveBuilding(DataExtend::arr2tree($nodes, 'node', 'pnode', 'children'), 0);
+        $menus =  $this->saveBuilding(DataExtend::arr2tree($nodes, 'node', 'pnode', 'children'), 0);
+        return count($menus);
     }
 
     /**

@@ -72,9 +72,9 @@ class NodeService extends Service
      * 获取节点列表
      * @return [type] [description]
      */
-    public function getAll($force = false)
+    public function getAll($app = '', $force = false)
     {
-        list($nodes, $pnodes, $methods) = [[], [], array_reverse($this->getMethods($force))];
+        list($nodes, $pnodes, $methods) = [[], [], array_reverse($this->getMethods($app, $force))];
         foreach ($methods as $node => $method) {
             list($count, $pnode) = [substr_count($node, '/'), substr($node, 0, strripos($node, '/'))];
             if ($count === 2 && (!empty($method['isauth']) || !empty($method['ismenu']))) {
@@ -131,23 +131,40 @@ class NodeService extends Service
     }
 
     /**
+     * 获取所有应用名称
+     * @return [type] [description]
+     */
+    public function getApps()
+    {
+        $path = $this->app->getBasePath();
+        $apps = [];
+        foreach (glob("{$path}*") as $item) {
+            if (is_dir($item)) {
+                $item = explode('\\', $item);
+                array_push($apps, end($item));
+            }
+        }
+        return $apps;
+    }
+
+    /**
      * 控制器方法扫描处理
      * @param boolean $force
      * @return array
      * @throws \ReflectionException
      */
-    public function getMethods($force = false)
+    public function getMethods($app = '',$force = false)
     {
         static $data = [];
-        if (empty($force)) {
-            if (count($data) > 0) return $data;
+        if (!$force) {
             $data = $this->app->cache->get('admin_auth_node', []);
             if (count($data) > 0) return $data;
         } else {
             $data = [];
         }
         $ignores = get_class_methods('\start\Controller');
-        foreach ($this->_scanDirectory(dirname($this->app->getAppPath())) as $file) {
+        $directory = empty($app) ? $this->app->getBasePath() : $this->app->getBasePath() . $app . DIRECTORY_SEPARATOR;
+        foreach ($this->_scanDirectory(dirname($directory)) as $file) {
             if (preg_match("|/(\w+)/(\w+)/controller/(.+)\.php$|i", $file, $matches)) {
                 list(, $namespace, $appname, $classname) = $matches;
                 $class = new \ReflectionClass(strtr("{$namespace}/{$appname}/controller/{$classname}", '/', '\\'));
@@ -179,9 +196,9 @@ class NodeService extends Service
         }
         return [
             'title'   => $title ? $title : $default,
-            'isauth'  => intval(preg_match('/@auth\s*true/i', $text)),
-            'ismenu'  => intval(preg_match('/@menu\s*true/i', $text)),
-            'islogin' => intval(preg_match('/@login\s*true/i', $text)),
+            'isauth'  => intval(preg_match('/@auth\s*/i', $text)),
+            'ismenu'  => intval(preg_match('/@menu\s*/i', $text)),
+            'islogin' => intval(preg_match('/@login\s*/i', $text)),
         ];
     }
 

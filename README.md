@@ -1,5 +1,5 @@
 # Library for ThinkPHP 6.0
-start-library 是针对 ThinkPHP 6.0 版本封装的一套工具类库，方便快速构建 WEB 应用。
+start-library 是针对 ThinkPHP 6.0 版本封装的一套多应用工具类库，方便快速构建 WEB 应用。
 
 ## 包含组件
 * 通用模型 （快速信息查询，分页查询，列表查询，数据安全删除处理：is_deleted 字段存在则自动软删除)
