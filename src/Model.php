@@ -33,6 +33,17 @@ class Model extends \think\Model
      * @var App
      */
     protected $app;
+
+    /**
+     * 关联
+     * @var array
+     */
+    protected $with = [];
+
+    /**
+     * 排序
+     */
+    protected $order = [];
     
     /**
      * 初始化服务
@@ -62,7 +73,10 @@ class Model extends \think\Model
      */
     public function list($filter = [], $with = [], $order = [])
     {
-        return $this->parseFilter($filter)->with($with)->order($order)->select();
+        return $this->parseFilter($filter)
+        ->with(array_merge($this->with, $with))
+        ->order(array_merge($this->order, $order))
+        ->select();
     }
 
     /**
@@ -84,7 +98,10 @@ class Model extends \think\Model
         if(!isset($paging['per_page'])){
             $paging['per_page'] = input('per_page',15,'trim');
         }
-        return $this->parseFilter($filter)->with($with)->order($order)->paginate($paging['per_page'], false, [
+        return $this->parseFilter($filter)
+        ->with(array_merge($this->with, $with))
+        ->order(array_merge($this->order, $order))
+        ->paginate($paging['per_page'], false, [
             'query' => array_merge(\request()->request() , $paging)
         ]);
     }
@@ -98,9 +115,9 @@ class Model extends \think\Model
     public function info($filter, $with = [])
     {
         if(!is_array($filter)){
-            return $this->with($with)->find($filter);
+            return $this->with(array_merge($this->with, $with))->find($filter);
         }else{
-            return $this->parseFilter($filter)->with($with)->find();
+            return $this->parseFilter($filter)->with(array_merge($this->with, $with))->find();
         }
     }
 
