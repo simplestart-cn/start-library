@@ -106,24 +106,25 @@ abstract class Service
     /**
      * 获取列表
      * @param  array  $filter [description]
+     * @param  array  $order [description]
      * @return [type]         [description]
      */
-    public static function getList($filter = [], $with = [])
+    public static function getList($filter = [], $order = [])
     {
         $model = self::model();
-        return $model->list($filter, $with);
+        return $model->list($filter, $order);
     }
 
     /**
      * 获取分页
      * @param  array  $filter [description]
-     * @param  array  $paging [description]
+     * @param  array  $order [description]
      * @return [type]         [description]
      */
-    public static function getPage($filter = [], $with = [])
+    public static function getPage($filter = [], $order = [])
     {
         $model = self::model();
-        return $model->page($filter, $with);
+        return $model->page($filter, $order);
     }
 
     /**
