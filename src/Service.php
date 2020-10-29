@@ -106,24 +106,25 @@ abstract class Service
     /**
      * 获取列表
      * @param  array  $filter [description]
+     * @param  array  $order [description]
      * @return [type]         [description]
      */
-    public static function getList($filter = [], $with = [], $order=[])
+    public static function getList($filter = [], $order = [])
     {
         $model = self::model();
-        return $model->list($filter, $with);
+        return $model->list($filter, $order);
     }
 
     /**
      * 获取分页
      * @param  array  $filter [description]
-     * @param  array  $paging [description]
+     * @param  array  $order [description]
      * @return [type]         [description]
      */
-    public static function getPage($filter = [], $with = [], $order = [], $paging = [])
+    public static function getPage($filter = [], $order = [])
     {
         $model = self::model();
-        return $model->page($filter, $with, [], $paging);
+        return $model->page($filter, $order);
     }
 
     /**
@@ -131,10 +132,44 @@ abstract class Service
      * @param  array  $filter [description]
      * @return [type]         [description]
      */
-    public static function getInfo($filter = [], $with = [])
+    public static function getInfo($filter, $with = [])
     {
         $model = self::model();
         return $model->info($filter, $with);
+    }
+
+    /**
+     * 创建记录
+     * @param  [type] $input [description]
+     * @return [type]        [description]
+     */
+    public static function create($input)
+    {
+        $model = self::model();
+        if($model->save($input)){
+            return $model;
+        }else{
+            throw_error('create fail');
+        }
+    }
+
+    /**
+     * 更新记录
+     * @param  [type] $input [description]
+     * @return [type]        [description]
+     */
+    public static function update($input)
+    {
+        $model = self::model();
+        $pk = $model->getPk();
+        if(!isset($input[$pk]) || empty($input[$pk])){
+            throw_error("$pk can not empty");
+        }
+        if($model->update($input)){
+            return $model;
+        }else{
+            throw_error('update fail');
+        }
     }
 
     /**
@@ -142,14 +177,14 @@ abstract class Service
      * @param [type] $input  [description]
      * @param array  $field [description]
      */
-    public static function save($input, $field = [])
+    public static function save($input)
     {
         $model = self::model();
         $pk = $model->getPk();
         if(isset($input[$pk])){
-            return $model->allowField($field)->update($input);
+            return $model->update($input);
         }else{
-            return $model->allowField($field)->save($input);
+            return $model->save($input);
         }
     }
 
