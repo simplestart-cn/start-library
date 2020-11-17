@@ -182,7 +182,7 @@ class Model extends \think\Model
                             $query = $query->where($key, 'in', $value);
                         }
                     }else{
-                        $query = $query->where($key, '=', $value);
+                        $query = $query->where($key, $value);
                     }
                 }
             }
