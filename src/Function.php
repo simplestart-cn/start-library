@@ -42,6 +42,18 @@ if (!function_exists('dolog')) {
         return ConfigService::instance()->dolog($action, $content);
     }
 }
+if (!function_exists('get_admin_id')) {
+    /**
+     * 获取当前管理员ID
+     * @param string $node
+     * @return boolean
+     * @throws ReflectionException
+     */
+    function get_admin_id()
+    {
+        return AuthService::instance()->getAdminId($node);
+    }
+}
 if (!function_exists('auth')) {
     /**
      * 访问权限检查

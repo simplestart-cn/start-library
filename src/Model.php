@@ -44,6 +44,7 @@ class Model extends \think\Model
      * 排序
      */
     protected $order = [];
+
     
     /**
      * 初始化服务
@@ -74,7 +75,7 @@ class Model extends \think\Model
     public function list($filter = [], $order = [], $with = [])
     {
         $order = is_array($order) ? $order : [$order]; 
-        return $this->parseFilter($filter)
+        return $this->filter($filter)
         ->with(array_merge($this->with, $with))
         ->order(array_merge($this->order, $order))
         ->select();
@@ -100,7 +101,7 @@ class Model extends \think\Model
         if(!isset($paging['per_page'])){
             $paging['per_page'] = input('per_page',20,'trim');
         }
-        return $this->parseFilter($filter)
+        return $this->filter($filter)
         ->with(array_merge($this->with, $with))
         ->order(array_merge($this->order, $order))
         ->paginate($paging['per_page'], false, [
@@ -119,7 +120,7 @@ class Model extends \think\Model
         if(!is_array($filter)){
             return $this->with(array_merge($this->with, $with))->find($filter);
         }else{
-            return $this->parseFilter($filter)->with(array_merge($this->with, $with))->find();
+            return $this->filter($filter)->with(array_merge($this->with, $with))->find();
         }
     }
 
@@ -136,35 +137,58 @@ class Model extends \think\Model
     }
 
     /**
-     * 解析查询条件
-     * @param  array  $filter [description]
+     * 条件查询
+     * @param  array  $input [description]
      * @return [type]         [description]
+     *
+     * input 结构支持
+     * $input = 1;
+     * $input = [
+     *     'key1' => 1,
+     *     'key2' => [1,2,3]
+     *     'key3' => ['!=', 1]
+     *     'key4' => ['in', [1,2,3]],
+     *      ...
+     * ];
      */
-    protected function parseFilter($filter=[])
+    public function filter($input = [])
     {
-        if(empty($filter)) return $this;
-        if(!is_array($filter)){
-            return $this->where($filter);
-        }else{
+        if(empty($input)) return $this;
+        if(!is_array($input)){
+            $this->where($input);
+        }else if(count($input) > 0){
             $query = null;
-            foreach ($filter as $key => $value) {
-                if(is_array($value) && count($value) === 3){
-                    if(is_null($query)){
-                        $query = $this->where($value[0], $value[1], $value[2]);
+            $fields = $this->getFields(); // 待优化的自动过滤参数: 会增加一次查开销
+            $operator = ['=','<>','>','>=','<','<=','like','not like','in','not in', 'between','not between','null','not null','exists','not exists','regexp','not regexp'];
+            foreach ($input as $key => $value) {
+                if(!isset($fields[$key])){
+                    continue;
+                }
+                if(is_null($query)){
+                    if(is_array($value)){
+                        if(in_array(strtolower($value[0]), $operator)){
+                            $query = $this->where($key, $value[0], $value[1]);
+                        }else{
+                            $query = $this->where($key, 'in', $value);
+                        }
                     }else{
-                        $query = $query->where($value[0], $value[1], $value[2]);
+                        $query = $this->where($key, '=', $value);
                     }
                 }else{
-                    if(is_null($query)){
-                        $query = $this->where($key, '=', $value);
+                    if(is_array($value)){
+                        if(in_array(strtolower($value[0]), $operator)){
+                            $query = $query->where($key, $value[0], $value[1]);
+                        }else{
+                            $query = $query->where($key, 'in', $value);
+                        }
                     }else{
                         $query = $query->where($key, '=', $value);
                     }
-                    
                 }
             }
-            return $query;
+            return $query ?: $this;
         }
+        return $this;
     }
 
 }

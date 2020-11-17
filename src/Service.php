@@ -146,7 +146,7 @@ abstract class Service
     public static function create($input)
     {
         $model = self::model();
-        if($model->save($input)){
+        if($model->save(self::inputFilter($input))){
             return $model;
         }else{
             throw_error('create fail');
@@ -165,7 +165,7 @@ abstract class Service
         if(!isset($input[$pk]) || empty($input[$pk])){
             throw_error("$pk can not empty");
         }
-        if($model->update($input)){
+        if($model->update(self::inputFilter($input))){
             return $model;
         }else{
             throw_error('update fail');
@@ -173,7 +173,18 @@ abstract class Service
     }
 
     /**
-     * 更新记录
+     * 过滤自动更新字段
+     */
+    private static function inputFilter($input)
+    {
+        if(isset($input['create_time'])) unset($input['create_time']);
+        if(isset($input['update_time'])) unset($input['update_time']);
+        return $input;
+    }
+
+
+    /**
+     * 更新记录(将弃用)
      * @param [type] $input  [description]
      * @param array  $field [description]
      */
@@ -195,14 +206,46 @@ abstract class Service
      */
     public static function remove($filter)
     {
+        if (strstr($filter, ',') !== false) {
+            $filter = explode(',', $filter);
+        }
         $model = self::model();
         if(!is_array($filter)){
             return $model->find($filter)->remove();
         }else{
-            return $model->where($filter)->find()->remove();
+            $list = $model->where($model->getPk(),'in',$filter)->select();
+            foreach ($list as $item) {
+                $item->remove();
+            }
+            return true;
         }
     }
 
+    /**
+     * 开启事务(待升级为异步事务)
+     * @return [type] [description]
+     */
+    public static function startTrance()
+    {
+        \think\facade\Db::startTrans();
+    }
 
+    /**
+     * 事务提交(待升级为异步事务)
+     * @return [type] [description]
+     */
+    public static function startCommit()
+    {
+        \think\facade\Db::commit();   
+    }
+
+    /**
+     * 事务回滚(待升级为异步事务)
+     * @return [type] [description]
+     */
+    public static function startRollback()
+    {
+        \think\facade\Db::rollback();
+    }
 
 }
