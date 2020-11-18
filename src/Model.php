@@ -13,13 +13,8 @@
 namespace start;
 
 use think\App;
-use think\Request;
 use think\Container;
-use think\db\Query;
-use think\db\exception\DataNotFoundException;
-use think\db\exception\DbException;
-use think\db\exception\ModelNotFoundException;
-use think\exception\HttpResponseException;
+use think\Request;
 
 /**
  * 自定义模型基类
@@ -44,7 +39,7 @@ class Model extends \think\Model
      * 排序
      */
     protected $order = [];
-    
+
     /**
      * 初始化服务
      * @return $this
@@ -71,13 +66,12 @@ class Model extends \think\Model
      * @param     array                         $with    [description]
      * @return    [type]                                  [description]
      */
-    public function list($filter = [], $order = [], $with = [])
-    {
-        $order = is_array($order) ? $order : [$order]; 
-        return $this->parseFilter($filter)
-        ->with(array_merge($this->with, $with))
-        ->order(array_merge($this->order, $order))
-        ->select();
+    function list($filter = [], $order = [], $with = []) {
+        $order = is_array($order) ? $order : [$order];
+        return $this->filter($filter)
+            ->with(array_merge($this->with, $with))
+            ->order(array_merge($this->order, $order))
+            ->select();
     }
 
     /**
@@ -88,24 +82,24 @@ class Model extends \think\Model
      * @param     array                         $paging   [description]
      * @return    [type]                                  [description]
      */
-    public function page($filter = [], $order = [], $with = [], $paging=[])
+    public function page($filter = [], $order = [], $with = [], $paging = [])
     {
         $order = is_array($order) ? $order : [$order];
-        if(!is_array($paging)){
-            $paging = ['page' => (int)$paging];
+        if (!is_array($paging)) {
+            $paging = ['page' => (int) $paging];
         }
-        if(!isset($paging['page'])){
-            $paging['page'] = input('page',1,'trim');
+        if (!isset($paging['page'])) {
+            $paging['page'] = input('page', 1, 'trim');
         }
-        if(!isset($paging['per_page'])){
-            $paging['per_page'] = input('per_page',20,'trim');
+        if (!isset($paging['per_page'])) {
+            $paging['per_page'] = input('per_page', 20, 'trim');
         }
-        return $this->parseFilter($filter)
-        ->with(array_merge($this->with, $with))
-        ->order(array_merge($this->order, $order))
-        ->paginate($paging['per_page'], false, [
-            'query' => array_merge(\request()->request() , $paging)
-        ]);
+        return $this->filter($filter)
+            ->with(array_merge($this->with, $with))
+            ->order(array_merge($this->order, $order))
+            ->paginate($paging['per_page'], false, [
+                'query' => array_merge(\request()->request(), $paging),
+            ]);
     }
 
     /**
@@ -116,10 +110,10 @@ class Model extends \think\Model
      */
     public function info($filter, $with = [])
     {
-        if(!is_array($filter)){
+        if (!is_array($filter)) {
             return $this->with(array_merge($this->with, $with))->find($filter);
-        }else{
-            return $this->parseFilter($filter)->with(array_merge($this->with, $with))->find();
+        } else {
+            return $this->filter($filter)->with(array_merge($this->with, $with))->find();
         }
     }
 
@@ -128,43 +122,101 @@ class Model extends \think\Model
      */
     public function remove()
     {
-        if(isset($this->is_deleted)){
+        if (isset($this->is_deleted)) {
             return $this->save(['is_deleted' => 1]);
-        }else{
+        } else {
             return $this->delete();
         }
     }
 
     /**
-     * 解析查询条件
-     * @param  array  $filter [description]
+     * 条件查询，支持操作符查询及关联表查询
+     * @param  array  $input [description]
      * @return [type]         [description]
+     *
+     * input 结构支持
+     * $input = 1;
+     * $input = [
+     *     'key1' => 1,
+     *     'key2' => [1,2,3],
+     *     'key3' => ['!=', 1],
+     *     'key4' => ['in', [1,2,3]],
+     *     'with.key1' => [1,2,3],
+     *     'with.key2' => ['like', "%$string%"]
+     * ];
      */
-    protected function parseFilter($filter=[])
+    public function filter($input = [])
     {
-        if(empty($filter)) return $this;
-        if(!is_array($filter)){
-            return $this->where($filter);
-        }else{
-            $query = null;
-            foreach ($filter as $key => $value) {
-                if(is_array($value) && count($value) === 3){
-                    if(is_null($query)){
-                        $query = $this->where($value[0], $value[1], $value[2]);
-                    }else{
-                        $query = $query->where($value[0], $value[1], $value[2]);
+        if (empty($input)) {
+            return $this;
+        }
+
+        if (!is_array($input)) {
+            $this->where($input);
+        } else if (count($input) > 0) {
+            $query    = null; // 查询对象(Query)
+            $table    = ''; // 查询表格(主表格)
+            $relation = array(); // 关联模型及条件
+            foreach ($input as $key => $value) {
+                if (stripos($key, '.') !== false) {
+                    list($model, $field) = explode('.', $key);
+                    if (!empty($value) || is_numeric($value)) {
+                        !isset($relation[$model]) ? $relation[$model] = [] : '';
+                        $relation[$model][$field]                     = $value;
                     }
-                }else{
-                    if(is_null($query)){
-                        $query = $this->where($key, '=', $value);
-                    }else{
-                        $query = $query->where($key, '=', $value);
-                    }
-                    
+                    unset($input[$key]);
                 }
             }
-            return $query;
+            // 关联查询
+            if (count($relation) > 0) {
+                $table = $this->getTable();
+                foreach ($relation as $model => $condition) {
+                    if (is_null($query)) {
+                        $query = $this->hasWhere($model, $this->parseFilter($this, $condition));
+                    } else {
+                        $query = $query->hasWhere($model, $this->parseFilter($query, $condition));
+                    }
+                }
+            }
+            // 单表查询
+            if (is_null($query)) {
+                $query = $this->parseFilter($this, $input, $table);
+            } else {
+                $query = $this->parseFilter($query, $input, $table);
+            }
+            return $query ?: $this;
         }
+        return $this;
+    }
+
+    /**
+     * 解析查询语句，支持操作符查询及关联表查询
+     * @param  [type] $query     [description]
+     * @param  array  $condition [description]
+     * @param  string $table     [description]
+     * @return [type]            [description]
+     */
+    private function parseFilter($query, array $condition = [], $table = '')
+    {
+        $operator = ['=', '<>', '>', '>=', '<', '<=', 'like', 'not like', 'in', 'not in', 'between', 'not between', 'null', 'not null', 'exists', 'not exists', 'regexp', 'not regexp'];
+        if (!empty($table) && stripos($table, '.') === false) {
+            $table .= '.';
+        }
+        foreach ($condition as $key => $value) {
+            if (empty($value) && !is_numeric($value)) {
+                continue;
+            }
+            if (is_array($value)) {
+                if (count($value) > 1 && in_array(strtolower($value[0]), $operator)) {
+                    $query = $query->where($table . $key, $value[0], $value[1]);
+                } else {
+                    $query = $query->where($table . $key, 'in', $value);
+                }
+            } else {
+                $query = $query->where($table . $key, $value);
+            }
+        }
+        return $query;
     }
 
 }

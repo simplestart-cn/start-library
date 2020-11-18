@@ -30,7 +30,7 @@ class AuthService extends Service
      */
     public function isLogin()
     {
-        return $this->getUserId() > 0;
+        return $this->getAdminId() > 0;
     }
 
     /**
@@ -46,7 +46,7 @@ class AuthService extends Service
      * 获取后台用户ID
      * @return integer
      */
-    public function getUserId()
+    public function getAdminId()
     {
         return intval($this->app->session->get('user.id', 0));
     }
@@ -55,7 +55,7 @@ class AuthService extends Service
      * 获取后台用户名称
      * @return string
      */
-    public function getUserName()
+    public function getAdminName()
     {
         return $this->app->session->get('user.username', '');
     }

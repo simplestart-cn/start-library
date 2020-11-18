@@ -40,7 +40,6 @@ abstract class Service
      */
     public $model;
 
-
     /**
      * Service constructor.
      * @param App $app
@@ -64,18 +63,18 @@ abstract class Service
     protected function initialize()
     {
         $namespace = $this->app->getNamespace();
-        if(!empty($this->model)){
-            if(is_object($this->model)){
+        if (!empty($this->model)) {
+            if (is_object($this->model)) {
                 return $this;
             }
-            if(class_exists($this->model)){
+            if (class_exists($this->model)) {
                 $this->model = Container::getInstance()->make($this->model);
-            }else if(class_exists($object = "{$namespace}\\model\\{$this->model}")) {
+            } else if (class_exists($object = "{$namespace}\\model\\{$this->model}")) {
                 $this->model = Container::getInstance()->make($object);
-            }else{
+            } else {
                 throw_error("[{{$this->model}] does not exist.");
             }
-        }else{
+        } else {
             if (class_exists($object = "{$namespace}\\model\\{$this->name}")) {
                 $this->model = Container::getInstance()->make($object);
             }
@@ -146,9 +145,9 @@ abstract class Service
     public static function create($input)
     {
         $model = self::model();
-        if($model->save($input)){
+        if ($model->save(self::inputFilter($input))) {
             return $model;
-        }else{
+        } else {
             throw_error('create fail');
         }
     }
@@ -161,29 +160,45 @@ abstract class Service
     public static function update($input)
     {
         $model = self::model();
-        $pk = $model->getPk();
-        if(!isset($input[$pk]) || empty($input[$pk])){
+        $pk    = $model->getPk();
+        if (!isset($input[$pk]) || empty($input[$pk])) {
             throw_error("$pk can not empty");
         }
-        if($model->update($input)){
+        if ($model->update(self::inputFilter($input))) {
             return $model;
-        }else{
+        } else {
             throw_error('update fail');
         }
     }
 
     /**
-     * 更新记录
+     * 过滤自动更新字段
+     */
+    private static function inputFilter($input)
+    {
+        if (isset($input['create_time'])) {
+            unset($input['create_time']);
+        }
+
+        if (isset($input['update_time'])) {
+            unset($input['update_time']);
+        }
+
+        return $input;
+    }
+
+    /**
+     * 更新记录(将弃用)
      * @param [type] $input  [description]
      * @param array  $field [description]
      */
     public static function save($input)
     {
         $model = self::model();
-        $pk = $model->getPk();
-        if(isset($input[$pk])){
+        $pk    = $model->getPk();
+        if (isset($input[$pk])) {
             return $model->update($input);
-        }else{
+        } else {
             return $model->save($input);
         }
     }
@@ -195,14 +210,46 @@ abstract class Service
      */
     public static function remove($filter)
     {
+        if (strstr($filter, ',') !== false) {
+            $filter = explode(',', $filter);
+        }
         $model = self::model();
-        if(!is_array($filter)){
+        if (!is_array($filter)) {
             return $model->find($filter)->remove();
-        }else{
-            return $model->where($filter)->find()->remove();
+        } else {
+            $list = $model->where($model->getPk(), 'in', $filter)->select();
+            foreach ($list as $item) {
+                $item->remove();
+            }
+            return true;
         }
     }
 
+    /**
+     * 开启事务(待升级为异步事务)
+     * @return [type] [description]
+     */
+    public static function startTrans()
+    {
+        \think\facade\Db::startTrans();
+    }
 
+    /**
+     * 事务提交(待升级为异步事务)
+     * @return [type] [description]
+     */
+    public static function startCommit()
+    {
+        \think\facade\Db::commit();
+    }
+
+    /**
+     * 事务回滚(待升级为异步事务)
+     * @return [type] [description]
+     */
+    public static function startRollback()
+    {
+        \think\facade\Db::rollback();
+    }
 
 }

@@ -114,7 +114,7 @@ class ConfigService extends Service
             'action'   => $action,
             'content'  => $content,
             'geoip'    => $this->app->request->ip() ?: '127.0.0.1',
-            'username' => AuthService::instance()->getUserName() ?: '-',
+            'username' => AuthService::instance()->getAdminName() ?: '-',
         ]);
     }
 

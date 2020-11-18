@@ -26,6 +26,7 @@ class ValidateHelper extends Helper
      * 快捷输入并验证（ 支持 规则 # 别名 ）
      * @param array $rules 验证规则（ 验证信息数组 ）
      * @param string $type 输入方式 ( post. 或 get. )
+     * @param string $strict 严格模式 ( 过滤未验证参数 )
      * @return array
      *  验证器示例
      *  name.require => message
@@ -86,14 +87,16 @@ class ValidateHelper extends Helper
      *  'fileExt'     => 'extensions to upload is not allowed',
      *  'fileMime'    => 'mimetype to upload is not allowed',
      */
-    public function init(array $rules, $type = '')
+    public function init(array $rules, $type = '', $strict = false)
     {
         list($data, $rule, $info, $alias) = [input('',[],'trim'), [], [], ''];
+        $strictFields = array();
         foreach ($rules as $name => $message) {
             if (stripos($name, '#') !== false) {
                 list($name, $alias) = explode('#', $name);
             }
             if (stripos($name, '.') === false) {
+                array_push($strictFields, $name);
                 if (is_numeric($name)) {
                     $field = $message;
                     if (is_string($message) && stripos($message, '#') !== false) {
@@ -107,6 +110,7 @@ class ValidateHelper extends Helper
             } else {
                 list($_rgx) = explode(':', $name);
                 list($_key, $_rule) = explode('.', $name);
+                array_push($strictFields, $_key);
                 if (in_array($_rule, ['value', 'default'])) {
                     if ($_rule === 'value') {
                         $data[$_key] = $message;
@@ -117,6 +121,13 @@ class ValidateHelper extends Helper
                     $info[$_rgx] = $message;
                     $data[$_key] = $data[$_key] ?? input($type . ($alias ?: $_key));
                     $rule[$_key] = empty($rule[$_key]) ? $_rule : "{$rule[$_key]}|{$_rule}";
+                }
+            }
+        }
+        if($strict){
+            foreach ($data as $key => $value) {
+                if(!in_array($key, $strictFields)){
+                    unset($data[$key]);
                 }
             }
         }
