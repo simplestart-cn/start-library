@@ -51,7 +51,19 @@ if (!function_exists('get_admin_id')) {
      */
     function get_admin_id()
     {
-        return AuthService::instance()->getAdminId($node);
+        return AuthService::instance()->getAdminId();
+    }
+}
+if (!function_exists('get_admin_name')) {
+    /**
+     * 获取当前管理员名称
+     * @param string $node
+     * @return boolean
+     * @throws ReflectionException
+     */
+    function get_admin_name()
+    {
+        return AuthService::instance()->getAdminName();
     }
 }
 if (!function_exists('auth')) {

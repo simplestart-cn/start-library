@@ -55,7 +55,7 @@ class AuthService extends Service
      * 获取后台用户名称
      * @return string
      */
-    public function getUserName()
+    public function getAdminName()
     {
         return $this->app->session->get('user.username', '');
     }

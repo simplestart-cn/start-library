@@ -24,7 +24,8 @@ start-library 是针对 ThinkPHP 6.0 版本封装的一套多应用工具类库�
 ```php
 // 定义 MyController 控制器
 class MyController extend start\Controller {
-	// 快速验证
+	// 快速验证,参数(验证规则：array(), 请求方法：'post./get.', 严格模式：true/fasle)
+	// 开启严格模式后只会接收经过规则验证的参数
     $input = $this->formValidate([
     	'id.require'    => 'ID不能为空',
         'title.require' => '名字不能为空'
@@ -86,3 +87,10 @@ $string = encode($content);
 // 加密字符串解密
 $content = decode($string);
 ```
+
+
+## 1.0.4 更新说明
+* 快速验证添加严格模式，开启后将只接收经过验证的参数
+* 添加全局获取当前管理员方法get_admin_id(),get_admin_name()
+* 优化模型快速查询方法，支持关联及操作符查询
+* 修复一些已知问题
