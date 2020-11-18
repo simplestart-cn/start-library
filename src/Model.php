@@ -36,6 +36,12 @@ class Model extends \think\Model
     protected $with = [];
 
     /**
+     * 查询
+     * @var array
+     */
+    protected $where = [];
+
+    /**
      * 排序
      */
     protected $order = [];
@@ -68,7 +74,8 @@ class Model extends \think\Model
      */
     function list($filter = [], $order = [], $with = []) {
         $order = is_array($order) ? $order : [$order];
-        return $this->filter($filter)
+        return $this
+            ->filter(array_merge($this->where, $filter))
             ->with(array_merge($this->with, $with))
             ->order(array_merge($this->order, $order))
             ->select();
@@ -94,7 +101,8 @@ class Model extends \think\Model
         if (!isset($paging['per_page'])) {
             $paging['per_page'] = input('per_page', 20, 'trim');
         }
-        return $this->filter($filter)
+        return $this
+            ->filter(array_merge($this->where, $filter))
             ->with(array_merge($this->with, $with))
             ->order(array_merge($this->order, $order))
             ->paginate($paging['per_page'], false, [
@@ -113,7 +121,7 @@ class Model extends \think\Model
         if (!is_array($filter)) {
             return $this->with(array_merge($this->with, $with))->find($filter);
         } else {
-            return $this->filter($filter)->with(array_merge($this->with, $with))->find();
+            return $this->filter(array_merge($this->where, $filter))->with(array_merge($this->with, $with))->find();
         }
     }
 
