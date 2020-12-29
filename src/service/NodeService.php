@@ -164,7 +164,7 @@ class NodeService extends Service
         }
         $ignores = get_class_methods('\start\Controller');
         $directory = empty($app) ? $this->app->getBasePath() : $this->app->getBasePath() . $app . DIRECTORY_SEPARATOR;
-        foreach ($this->_scanDirectory(dirname($directory)) as $file) {
+        foreach ($this->_scanDirectory($directory) as $file) {
             if (preg_match("|/(\w+)/(\w+)/controller/(.+)\.php$|i", $file, $matches)) {
                 list(, $namespace, $appname, $classname) = $matches;
                 $class = new \ReflectionClass(strtr("{$namespace}/{$appname}/controller/{$classname}", '/', '\\'));
