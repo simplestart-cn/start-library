@@ -52,7 +52,7 @@ class MenuService extends Service
      * 获取菜单树数据
      * @return [type] [description]
      */
-    public static function getTree()
+    public static function getTree($apps = [], $nodes = [])
     { 
         $self = self::instance();
         $menus = $self->model->where(['status' => '1'])->order('sort desc,id asc')->select();
@@ -67,7 +67,7 @@ class MenuService extends Service
      * 获取菜应用菜单
      * @return [type] [description]
      */
-    public static function getAppMenu()
+    public static function getAppMenu($apps = [], $nodes = [])
     { 
         $self = self::instance();
         $data = $self->model->where(['status' => '1'])->order('sort desc,id asc')->select();

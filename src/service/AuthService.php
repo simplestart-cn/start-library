@@ -39,7 +39,7 @@ class AuthService extends Service
      */
     public function isSuper()
     {
-        return $this->app->session->get('user.is_super', false);
+        return $this->app->session->get('admin.is_super', false);
     }
 
     /**
@@ -48,7 +48,7 @@ class AuthService extends Service
      */
     public function getAdminId()
     {
-        return intval($this->app->session->get('user.id', 0));
+        return intval($this->app->session->get('admin.id', 0));
     }
 
     /**
@@ -57,13 +57,13 @@ class AuthService extends Service
      */
     public function getAdminName()
     {
-        return $this->app->session->get('user.username', '');
+        return $this->app->session->get('admin.name', '');
     }
 
     /**
      * 添加角色权限
      */
-    public static function save($input, $field = [])
+    public static function create($input)
     {
         if(isset($input['id']) && !empty($input['id'])){
             $model = self::getInfo($input['id']);
@@ -85,22 +85,46 @@ class AuthService extends Service
     }
 
     /**
-     * 删除角色
-     * @param  [type] $id [description]
+     * 更新角色权限
+     */
+    public static function update($input)
+    {
+        if(isset($input['id']) && !empty($input['id'])){
+            $model = self::getInfo($input['id']);
+        }else{
+            $model = self::model();
+        }
+        if($model->save($input)){
+            $nodes = [];
+            if(isset($input['nodes']) && !empty($input['nodes'])){
+                foreach ($input['nodes'] as $value) {
+                    $nodes[] = ['auth' => $model->id, 'node' => $value['node'], 'half' => $value['half']];
+                }
+            }
+            NodeService::instance()->model()->where(['auth' => $model->id])->delete();
+            NodeService::instance()->model()->insertAll($nodes);
+            return $model;
+        }
+        return false;
+    }
+
+    /**
+     * 删除权限
+     * @param  [type] $filter [description]
      * @return [type]     [description]
      */
-    public static function remove($id)
+    public static function remove($filter)
     {
-        if(strstr($id, ',') !== false){
-            $id = ['id','in',explode(',',$id)];
+        if(is_string($filter) && strstr($filter, ',') !== false){
+            $filter = explode(',',$filter);
         }
         $model = self::model();
-        if(!is_array($id)){
-            NodeService::instance()->model()->where(['auth' => $id])->delete();
-            return $model->find($id)->remove();
+        if(!is_array($filter)){
+            NodeService::instance()->model()->where(['auth' => $filter])->delete();
+            return $model->find($filter)->remove();
         }else{
-            NodeService::instance()->model()->where('auth','in',$id)->delete();
-            return $model->where($id)->find()->remove();
+            NodeService::instance()->model()->where('auth','in',$filter)->delete();
+            return $model->where('id', 'in', $filter)->delete();
         }
     }
 
@@ -123,6 +147,9 @@ class AuthService extends Service
     public static function getNodes($auths = [])
     {
         $model = self::model();
+        if(is_string($auths) && strstr($auths, ',') !== false){
+            $auths = explode(',',$auths);
+        }
         return $model->nodes()->where('auth', 'in', $auths)->column('node');
     }
 
@@ -150,7 +177,6 @@ class AuthService extends Service
      */
     public function check($node = '')
     {
-        return true;
         if ($this->isSuper()) return true;
         $service = NodeService::instance();
         list($real, $nodes) = [$service->fullnode($node), $service->getMethods()];
@@ -158,7 +184,7 @@ class AuthService extends Service
             $nodes[str_replace('_', '', $key)] = $rule;
         }
         if (!empty($nodes[$real]['isauth']) || !empty($nodes[$real]['ismenu'])) {
-            return in_array($real, $this->app->session->get('user.nodes', []));
+            return in_array($real, $this->app->session->get('admin.nodes', []));
         } else {
             return !(!empty($nodes[$real]['islogin']) && !$this->isLogin());
         }
@@ -172,33 +198,33 @@ class AuthService extends Service
      * @throws \think\db\exception\DbException
      * @throws \think\db\exception\ModelNotFoundException
      */
-    public function apply($force = false)
-    {
-        if ($force) $this->clearCache();
-        if (($uid = $this->app->session->get('user.id'))) {
-            $user = $this->app->db->name('AdminUser')->where(['id' => $uid])->find();
-            if (($aids = $user['authorize'])) {
-                $where = [['status', '=', '1'], ['id', 'in', explode(',', $aids)]];
-                $subsql = $this->app->db->name('AdminAuth')->field('id')->where($where)->buildSql();
-                $user['nodes'] = array_unique($this->app->db->name('AdminAuthNode')->whereRaw("auth in {$subsql}")->column('node'));
-                $this->app->session->set('user', $user);
-            } else {
-                $user['nodes'] = [];
-                $this->app->session->set('user', $user);
-            }
-        }
-        return $this;
-    }
+    // public function apply($force = false)
+    // {
+    //     if ($force) $this->clearCache();
+    //     if (($uid = $this->app->session->get('admin.id'))) {
+    //         $user = $this->app->db->name('AdminUser')->where(['id' => $uid])->find();
+    //         if (($aids = $user['authorize'])) {
+    //             $where = [['status', '=', '1'], ['id', 'in', explode(',', $aids)]];
+    //             $subsql = $this->app->db->name('AdminAuth')->field('id')->where($where)->buildSql();
+    //             $user['nodes'] = array_unique($this->app->db->name('AdminAuthNode')->whereRaw("auth in {$subsql}")->column('node'));
+    //             $this->app->session->set('user', $user);
+    //         } else {
+    //             $user['nodes'] = [];
+    //             $this->app->session->set('user', $user);
+    //         }
+    //     }
+    //     return $this;
+    // }
 
     /**
      * 清理节点缓存
      * @return $this
      */
-    public function clearCache()
-    {
-        $this->app->cache->delete('admin_auth_node');
-        return $this;
-    }
+    // public function clearCache()
+    // {
+    //     $this->app->cache->delete('admin_auth_node');
+    //     return $this;
+    // }
 
     
 

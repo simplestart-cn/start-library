@@ -210,7 +210,7 @@ abstract class Service
      */
     public static function remove($filter)
     {
-        if (strstr($filter, ',') !== false) {
+        if (is_string($filter) && strstr($filter, ',') !== false) {
             $filter = explode(',', $filter);
         }
         $model = self::model();
