@@ -52,7 +52,7 @@ class AuthService extends Service
     }
 
     /**
-     * 获取后台用户名称
+     * 获取后台账户名称
      * @return string
      */
     public function getAdminName()
@@ -65,19 +65,18 @@ class AuthService extends Service
      */
     public static function create($input)
     {
-        if(isset($input['id']) && !empty($input['id'])){
-            $model = self::getInfo($input['id']);
-        }else{
-            $model = self::model();
-        }
+        $model = self::model();
         if($model->save($input)){
             $nodes = [];
             if(isset($input['nodes']) && !empty($input['nodes'])){
                 foreach ($input['nodes'] as $value) {
-                    $nodes[] = ['auth' => $model->id, 'node' => $value['node'], 'half' => $value['half']];
+                    $nodes[] = [
+                        'auth' => $model->id,
+                        'node' => $value['node'],
+                        'half' => isset($value['half']) ? $value['half'] : 0
+                    ];
                 }
             }
-            NodeService::instance()->model()->where(['auth' => $model->id])->delete();
             NodeService::instance()->model()->insertAll($nodes);
             return $model;
         }
@@ -98,7 +97,11 @@ class AuthService extends Service
             $nodes = [];
             if(isset($input['nodes']) && !empty($input['nodes'])){
                 foreach ($input['nodes'] as $value) {
-                    $nodes[] = ['auth' => $model->id, 'node' => $value['node'], 'half' => $value['half']];
+                    $nodes[] = [
+                        'auth' => $model->id,
+                        'node' => $value['node'],
+                        'half' => isset($value['half']) ? $value['half'] : 0
+                    ];
                 }
             }
             NodeService::instance()->model()->where(['auth' => $model->id])->delete();
@@ -126,6 +129,53 @@ class AuthService extends Service
             NodeService::instance()->model()->where('auth','in',$filter)->delete();
             return $model->where('id', 'in', $filter)->delete();
         }
+    }
+
+    /**
+     * 重置权限组
+     * @return [type] [description]
+     */
+    public static function reset()
+    {
+        $list = MenuService::model()->list(['status' => 1]);
+        $tree = DataExtend::arr2tree($list->toArray());
+        $auths = array();
+        foreach ($tree as  $value) {
+            $auths[] = [
+                'title' => $value['title'],
+                'nodes' => self::combineNodes($value)
+            ];
+        }
+        self::startTrans();
+        try {
+            // 清理数据
+            AuthService::model()->where('id', '>', 0)->delete(true);
+            NodeService::model()->where('id', '>', 0)->delete(true);
+            // 插入数据
+            foreach ($auths as $auth) {
+                self::create($auth);
+            }
+            self::startCommit();
+            return true;
+        } catch (\HttpResponseException $e) {
+            self::startRollback();
+            throw_error($e->getMessage());
+            return false;
+        }
+    }
+
+    private static function combineNodes($item)
+    {
+        $nodes = array();
+        if(isset($item['node'])){
+            $nodes[] = ['node' => $item['node']];
+        }
+        if(isset($item['children']) && !empty($item['children'])){
+            foreach ($item['children'] as $child) {
+                $nodes = array_merge($nodes, self::combineNodes($child));
+            }
+        }
+        return $nodes;
     }
 
     /**
@@ -189,43 +239,5 @@ class AuthService extends Service
             return !(!empty($nodes[$real]['islogin']) && !$this->isLogin());
         }
     }
-
-    /**
-     * 初始化用户权限
-     * @param boolean $force 强刷权限
-     * @return $this
-     * @throws \think\db\exception\DataNotFoundException
-     * @throws \think\db\exception\DbException
-     * @throws \think\db\exception\ModelNotFoundException
-     */
-    // public function apply($force = false)
-    // {
-    //     if ($force) $this->clearCache();
-    //     if (($uid = $this->app->session->get('admin.id'))) {
-    //         $user = $this->app->db->name('AdminUser')->where(['id' => $uid])->find();
-    //         if (($aids = $user['authorize'])) {
-    //             $where = [['status', '=', '1'], ['id', 'in', explode(',', $aids)]];
-    //             $subsql = $this->app->db->name('AdminAuth')->field('id')->where($where)->buildSql();
-    //             $user['nodes'] = array_unique($this->app->db->name('AdminAuthNode')->whereRaw("auth in {$subsql}")->column('node'));
-    //             $this->app->session->set('user', $user);
-    //         } else {
-    //             $user['nodes'] = [];
-    //             $this->app->session->set('user', $user);
-    //         }
-    //     }
-    //     return $this;
-    // }
-
-    /**
-     * 清理节点缓存
-     * @return $this
-     */
-    // public function clearCache()
-    // {
-    //     $this->app->cache->delete('admin_auth_node');
-    //     return $this;
-    // }
-
     
-
 }

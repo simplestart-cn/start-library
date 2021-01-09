@@ -11,14 +11,14 @@
 // +----------------------------------------------------------------------
 
 return [
-    'start_not_auth'       => '抱歉，没有访问该操作的权限！',
-    'start_not_login'      => '抱歉，需要登录获取访问权限！',
-    'start_delete_success' => '恭喜，数据删除成功！',
-    'start_delete_error'   => '抱歉，数据删除失败, 请稍候再试！',
-    'start_form_success'   => '恭喜，数据保存成功！',
-    'start_form_error'     => '抱歉，数据保存失败, 请稍候再试！',
-    'start_save_success'   => '恭喜，数据更新成功！',
-    'start_save_error'     => '抱歉，数据更新失败, 请稍候再试！',
-    'start_page_html'      => '共 %s 条记录，每页显示 %s 条，共 %s 页当前显示第 %s 页。',
-    'start_csrf_error'     => '表单令牌验证失败，请刷新页面再试！',
+    'not_auth'       => '没有访问该操作的权限.',
+    'not_login'      => '需要登录获取访问权限.',
+    'create_success' => '数据保存成功.',
+    'create_error'   => '数据保存失败, 请稍候再试~',
+    'update_success' => '数据更新成功.',
+    'update_error'   => '数据更新失败, 请稍候再试~',
+    'remove_success' => '数据删除成功.',
+    'remove_error'   => '数据删除失败, 请稍候再试~',
+    'page_html'      => '共 %s 条记录，每页显示 %s 条，共 %s 页当前显示第 %s 页。',
+    'csrf_error'     => '表单令牌验证失败，请刷新页面再试~',
 ];

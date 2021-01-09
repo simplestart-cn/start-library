@@ -11,14 +11,14 @@
 // +----------------------------------------------------------------------
 
 return [
-    'start_not_auth'       => 'Sorry, no permission to access the operation.',
-    'start_not_login'      => 'Sorry, requiring login to obtain view permission.',
-    'start_delete_success' => 'Data deletion completed.',
-    'start_delete_error'   => 'Sorry, data deletion failed, please try again later.',
-    'start_form_success'   => 'Data saving completed.',
-    'start_form_error'     => 'Sorry, data saving failed, please try again later.',
-    'start_save_success'   => 'Data update completed.',
-    'start_save_error'     => 'Sorry, data update failed, please try again later.',
-    'start_page_html'      => 'Total %s records, display %s per page, total %s page current display %s page.',
-    'start_csrf_error'     => 'Form token validation failed, please refresh and try again later.',
+    'not_auth'       => 'No permission to access.',
+    'not_login'      => 'Requiring login to obtain permission.',
+    'create_success' => 'Data create completed.',
+    'create_error'   => 'Data create failed, please try again later.',
+    'update_success' => 'Data update completed.',
+    'update_error'   => 'Data update failed, please try again later.',
+    'remove_success' => 'Data remove completed.',
+    'remove_error'   => 'Data remove failed, please try again later.',
+    'page_html'      => 'Total %s records, display %s per page, total %s page current display %s page.',
+    'csrf_error'     => 'Token validation failed, please refresh and try again later.',
 ];

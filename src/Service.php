@@ -64,15 +64,12 @@ abstract class Service
     {
         $namespace = $this->app->getNamespace();
         if (!empty($this->model)) {
-            if (is_object($this->model)) {
-                return $this;
-            }
             if (class_exists($this->model)) {
                 $this->model = Container::getInstance()->make($this->model);
             } else if (class_exists($object = "{$namespace}\\model\\{$this->model}")) {
                 $this->model = Container::getInstance()->make($object);
             } else {
-                throw_error("[{{$this->model}] does not exist.");
+                throw_error("Model $this->model does not exist.");
             }
         } else {
             if (class_exists($object = "{$namespace}\\model\\{$this->name}")) {
@@ -99,7 +96,11 @@ abstract class Service
      */
     public static function model()
     {
-        return self::instance()->model;
+        $model = self::instance()->model;
+         if (!is_object($model)) {
+            throw_error("Model does not exist.");
+        }
+        return new $model;
     }
 
     /**

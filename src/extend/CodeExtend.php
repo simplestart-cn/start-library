@@ -67,4 +67,21 @@ class CodeExtend
         while (strlen($string) < $size) $string .= rand(0, 9);
         return $string;
     }
+
+    /**
+     * 唯一字符编码(临时)
+     * @param  integer $size   [description]
+     * @param  string  $prefix [description]
+     * @return [type]          [description]
+     */
+    public static function uniqueId($size = 32, $prefix = '')
+    {
+        $numbs = self::uniqueNumber(24);
+        $chars = 'abcdefghijklmnopqrstuvwxyz'.$numbs;
+        $string = $prefix . $chars[rand(1, strlen($chars) - 1)];
+        if (isset($chars)) while (strlen($string) < $size) {
+            $string .= $chars[rand(0, strlen($chars) - 1)];
+        }
+        return strtoupper($string);
+    }
 }

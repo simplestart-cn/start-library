@@ -109,12 +109,13 @@ class ConfigService extends Service
      */
     public function dolog($action, $content)
     {
-        return $this->app->db->name('AdminOplog')->insert([
+        return $this->app->db->name('AdminOperation')->insert([
             'node'     => NodeService::instance()->getCurrent(),
             'action'   => $action,
             'content'  => $content,
             'geoip'    => $this->app->request->ip() ?: '127.0.0.1',
-            'account' => AuthService::instance()->getAdminName() ?: '-',
+            'admin_id' => AuthService::instance()->getAdminId() ?: 0,
+            'admin_name' => AuthService::instance()->getAdminName() ?: '-',
         ]);
     }
 
@@ -124,7 +125,7 @@ class ConfigService extends Service
      * @param boolean $new 强制替换文件
      * @param string|null $file 文件名称
      */
-    public function putlog($data, $new = false, $file = null)
+    public function putlog($data,  $file = null, $new = false)
     {
         if (is_null($file)) $file = $this->app->getRootPath() . 'runtime' . DIRECTORY_SEPARATOR . date('Ymd') . '.log';
         $str = (is_string($data) ? $data : ((is_array($data) || is_object($data)) ? print_r($data, true) : var_export($data, true))) . PHP_EOL;

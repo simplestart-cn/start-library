@@ -27,7 +27,7 @@ if (!function_exists('putlog')) {
      */
     function putlog($data, $file = null, $new = false)
     {
-        ConfigService::instance()->putlog($data, $new, $file);
+        ConfigService::instance()->putlog($data, $file, $new);
     }
 }
 if (!function_exists('dolog')) {

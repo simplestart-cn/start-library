@@ -14,7 +14,6 @@ namespace start\service;
 
 use start\extend\DataExtend;
 use start\Service;
-use think\facade\Db;
 
 /**
  * 系统菜单管理服务
@@ -34,28 +33,25 @@ class MenuService extends Service
      * @param  [type] $calback [description]
      * @return [type]          [description]
      */
-    public static function getList($filter = [], $with = [], $order = [], $calback = null)
+    public static function getList($filter = [], $order = ['sort desc','id asc'])
     {
-        $model = self::model();
-        $list = $model->order('sort desc,id asc')->select();
-        $menus = array();
-        foreach ($list as $item) {
-            // 权限过滤
-            if (AuthService::instance()->check($item['node'])){
-               array_push($menus, $item);
-            }
+        $self = self::instance();
+        if(AuthService::instance()->isSuper()){
+            return $self->model->list($filter, $order);
+        }else{
+            $nodes = $self->app->session->get('admin.nodes', []);
+            return $self->model->filter($filter)->where('node','in',$nodes)->order($order)->select();
         }
-        return $menus;
     }
 
     /**
      * 获取菜单树数据
      * @return [type] [description]
      */
-    public static function getTree($apps = [], $nodes = [])
+    public static function getTree()
     { 
         $self = self::instance();
-        $menus = $self->model->where(['status' => '1'])->order('sort desc,id asc')->select();
+        $menus = self::getList(['status' => 1]);
         $menus = DataExtend::arr2tree($menus->toArray());
         if(count($menus) == 1 && isset($menus[0]['children'])){
             $menus = $menus[0]['children'];
@@ -67,10 +63,10 @@ class MenuService extends Service
      * 获取菜应用菜单
      * @return [type] [description]
      */
-    public static function getAppMenu($apps = [], $nodes = [])
+    public static function getAppMenu()
     { 
         $self = self::instance();
-        $data = $self->model->where(['status' => '1'])->order('sort desc,id asc')->select();
+        $data = self::getList(['status' => 1]);
         $data = DataExtend::arr2tree($data->toArray());
         $apps = $self->formatData($data);
         $access = array();
@@ -114,16 +110,13 @@ class MenuService extends Service
             }
             $temp['meta']['title'] = $data['title'];
             $temp['meta']['icon']  = $data['icon'];
-
+            // 递归
             if(isset($data['children']) && count($data['children']) > 0){
                 foreach ($data['children'] as $c) {
                     $temp['children'] = $this->formatData($data['children']);
                 }
             }
-            // 权限过滤
-            if (AuthService::instance()->check($data['node'])){
-                $routers[] = $temp;
-            }
+            $routers[] = $temp;
         }
         return $routers;
     }
