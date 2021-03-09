@@ -14,6 +14,9 @@ namespace start\service;
 
 use start\extend\DataExtend;
 use start\Service;
+use think\App;
+use think\facade\Cache;
+use think\facade\Session;
 
 /**
  * 系统权限管理服务
@@ -24,40 +27,82 @@ class AuthService extends Service
 {
     public $model = 'start\model\Auth';
 
+    public $user = false;
+
+    /**
+     * SESSION及Token两种方式保持登录态
+     * @param App $app
+     */
+    public function __construct(App $app)
+    {
+        parent::__construct($app);
+        $token      = \request()->header('user-token', '');
+        $this->user = $app->session->get('user', false);
+        if (!$this->user) {
+            $this->user = Cache::get($token, false);
+        }
+    }
+
     /**
      * 是否已经登录
      * @return boolean
      */
     public function isLogin()
     {
-        return $this->getAdminId() > 0;
+        return !!$this->user;
     }
 
     /**
-     * 是否为超级用户
+     * 是否管理员
      * @return boolean
      */
-    public function isSuper()
+    public function isAdmin()
     {
-        return $this->app->session->get('admin.is_super', false);
+        return $this->user && $this->user['is_admin'];
     }
 
     /**
-     * 获取后台用户ID
+     * 是否为超级账户
+     * @return boolean
+     */
+    public function isOwner()
+    {
+        return $this->user && $this->user['is_owner'];
+    }
+
+    /**
+     * 获取登录账户
+     * @return [type] [description]
+     */
+    public function getUser()
+    {
+        return $this->user;
+    }
+
+    /**
+     * 获取账户ID
      * @return integer
      */
-    public function getAdminId()
+    public function getUserId()
     {
-        return intval($this->app->session->get('admin.id', 0));
+        if ($this->user) {
+            return intval($this->user['id']);
+        }
+
+        return 0;
     }
 
     /**
-     * 获取后台账户名称
+     * 获取账户名称
      * @return string
      */
-    public function getAdminName()
+    public function getUserName()
     {
-        return $this->app->session->get('admin.name', '');
+        if ($this->user) {
+            return intval($this->user['name']);
+        }
+
+        return '';
     }
 
     /**
@@ -66,14 +111,14 @@ class AuthService extends Service
     public static function create($input)
     {
         $model = self::model();
-        if($model->save($input)){
+        if ($model->save($input)) {
             $nodes = [];
-            if(isset($input['nodes']) && !empty($input['nodes'])){
+            if (isset($input['nodes']) && !empty($input['nodes'])) {
                 foreach ($input['nodes'] as $value) {
                     $nodes[] = [
                         'auth' => $model->id,
                         'node' => $value['node'],
-                        'half' => isset($value['half']) ? $value['half'] : 0
+                        'half' => isset($value['half']) ? $value['half'] : 0,
                     ];
                 }
             }
@@ -88,19 +133,19 @@ class AuthService extends Service
      */
     public static function update($input)
     {
-        if(isset($input['id']) && !empty($input['id'])){
+        if (isset($input['id']) && !empty($input['id'])) {
             $model = self::getInfo($input['id']);
-        }else{
+        } else {
             $model = self::model();
         }
-        if($model->save($input)){
+        if ($model->save($input)) {
             $nodes = [];
-            if(isset($input['nodes']) && !empty($input['nodes'])){
+            if (isset($input['nodes']) && !empty($input['nodes'])) {
                 foreach ($input['nodes'] as $value) {
                     $nodes[] = [
                         'auth' => $model->id,
                         'node' => $value['node'],
-                        'half' => isset($value['half']) ? $value['half'] : 0
+                        'half' => isset($value['half']) ? $value['half'] : 0,
                     ];
                 }
             }
@@ -118,15 +163,15 @@ class AuthService extends Service
      */
     public static function remove($filter)
     {
-        if(is_string($filter) && strstr($filter, ',') !== false){
-            $filter = explode(',',$filter);
+        if (is_string($filter) && strstr($filter, ',') !== false) {
+            $filter = explode(',', $filter);
         }
         $model = self::model();
-        if(!is_array($filter)){
+        if (!is_array($filter)) {
             NodeService::instance()->model()->where(['auth' => $filter])->delete();
             return $model->find($filter)->remove();
-        }else{
-            NodeService::instance()->model()->where('auth','in',$filter)->delete();
+        } else {
+            NodeService::instance()->model()->where('auth', 'in', $filter)->delete();
             return $model->where('id', 'in', $filter)->delete();
         }
     }
@@ -137,13 +182,13 @@ class AuthService extends Service
      */
     public static function reset()
     {
-        $list = MenuService::model()->list(['status' => 1]);
-        $tree = DataExtend::arr2tree($list->toArray());
+        $list  = MenuService::model()->list(['status' => 1]);
+        $tree  = DataExtend::arr2tree($list->toArray());
         $auths = array();
-        foreach ($tree as  $value) {
+        foreach ($tree as $value) {
             $auths[] = [
                 'title' => $value['title'],
-                'nodes' => self::combineNodes($value)
+                'nodes' => self::combineNodes($value),
             ];
         }
         self::startTrans();
@@ -167,10 +212,10 @@ class AuthService extends Service
     private static function combineNodes($item)
     {
         $nodes = array();
-        if(isset($item['node'])){
+        if (isset($item['node'])) {
             $nodes[] = ['node' => $item['node']];
         }
-        if(isset($item['children']) && !empty($item['children'])){
+        if (isset($item['children']) && !empty($item['children'])) {
             foreach ($item['children'] as $child) {
                 $nodes = array_merge($nodes, self::combineNodes($child));
             }
@@ -183,7 +228,7 @@ class AuthService extends Service
      * @param  array  $filter [description]
      * @return [type]         [description]
      */
-    public static function getInfo($filter=[], $with=[])
+    public static function getInfo($filter = [], $with = [])
     {
         $model = self::model();
         return $model->info($filter, ['nodes']);
@@ -197,8 +242,8 @@ class AuthService extends Service
     public static function getNodes($auths = [])
     {
         $model = self::model();
-        if(is_string($auths) && strstr($auths, ',') !== false){
-            $auths = explode(',',$auths);
+        if (is_string($auths) && strstr($auths, ',') !== false) {
+            $auths = explode(',', $auths);
         }
         return $model->nodes()->where('auth', 'in', $auths)->column('node');
     }
@@ -227,17 +272,22 @@ class AuthService extends Service
      */
     public function check($node = '')
     {
-        if ($this->isSuper()) return true;
-        $service = NodeService::instance();
+        if ($this->isOwner()) {
+            return true;
+        }
+
+        $service            = NodeService::instance();
         list($real, $nodes) = [$service->fullnode($node), $service->getMethods()];
-        foreach ($nodes as $key => $rule) if (stripos($key, '_') !== false) {
-            $nodes[str_replace('_', '', $key)] = $rule;
+        foreach ($nodes as $key => $rule) {
+            if (stripos($key, '_') !== false) {
+                $nodes[str_replace('_', '', $key)] = $rule;
+            }
         }
         if (!empty($nodes[$real]['isauth']) || !empty($nodes[$real]['ismenu'])) {
-            return in_array($real, $this->app->session->get('admin.nodes', []));
+            return in_array($real, $this->app->session->get('user.nodes', []));
         } else {
             return !(!empty($nodes[$real]['islogin']) && !$this->isLogin());
         }
     }
-    
+
 }

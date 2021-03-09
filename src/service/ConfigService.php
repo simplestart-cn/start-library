@@ -114,8 +114,8 @@ class ConfigService extends Service
             'action'   => $action,
             'content'  => $content,
             'geoip'    => $this->app->request->ip() ?: '127.0.0.1',
-            'admin_id' => AuthService::instance()->getAdminId() ?: 0,
-            'admin_name' => AuthService::instance()->getAdminName() ?: '-',
+            'user_id' => AuthService::instance()->getUserId() ?: 0,
+            'user_name' => AuthService::instance()->getUserName() ?: '-',
         ]);
     }
 
@@ -140,7 +140,7 @@ class ConfigService extends Service
     public function checkRunMode($type = 'dev')
     {
         $domain = $this->app->request->host(true);
-        $isDemo = is_numeric(stripos($domain, 'thinkstart.top'));
+        $isDemo = is_numeric(stripos($domain, 'start-admin.com'));
         $isLocal = in_array($domain, ['127.0.0.1', 'localhost']);
         if ($type === 'dev') return $isLocal || $isDemo;
         if ($type === 'demo') return $isDemo;

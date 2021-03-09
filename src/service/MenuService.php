@@ -18,7 +18,7 @@ use start\Service;
 /**
  * 系统菜单管理服务
  * Class MenuService
- * @package app\admin\service
+ * @package app\service
  */
 class MenuService extends Service
 {
@@ -36,10 +36,10 @@ class MenuService extends Service
     public static function getList($filter = [], $order = ['sort desc','id asc'])
     {
         $self = self::instance();
-        if(AuthService::instance()->isSuper()){
+        if(AuthService::instance()->isOwner()){
             return $self->model->list($filter, $order);
         }else{
-            $nodes = $self->app->session->get('admin.nodes', []);
+            $nodes = $self->app->session->get('user.nodes', []);
             return $self->model->filter($filter)->where('node','in',$nodes)->order($order)->select();
         }
     }

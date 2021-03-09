@@ -157,7 +157,7 @@ class NodeService extends Service
     {
         static $data = [];
         if (!$force) {
-            $data = $this->app->cache->get('admin_auth_node', []);
+            $data = $this->app->cache->get('core_auth_node', []);
             if (count($data) > 0) return $data;
         } else {
             $data = [];
@@ -177,7 +177,7 @@ class NodeService extends Service
             }
         }
         $data = array_change_key_case($data, CASE_LOWER);
-        $this->app->cache->set('admin_auth_node', $data);
+        $this->app->cache->set('core_auth_node', $data);
         return $data;
     }
 

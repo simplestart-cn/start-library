@@ -42,6 +42,43 @@ if (!function_exists('dolog')) {
         return ConfigService::instance()->dolog($action, $content);
     }
 }
+if (!function_exists('get_user')) {
+    /**
+     * 获取当前管理员ID
+     * @param string $node
+     * @return boolean
+     * @throws ReflectionException
+     */
+    function get_user()
+    {
+        return AuthService::instance()->getUser();
+    }
+}
+if (!function_exists('get_user_id')) {
+    /**
+     * 获取当前管理员ID
+     * @param string $node
+     * @return boolean
+     * @throws ReflectionException
+     */
+    function get_user_id()
+    {
+        return AuthService::instance()->getUserId();
+    }
+}
+if (!function_exists('get_user_name')) {
+    /**
+     * 获取当前管理员名称
+     * @param string $node
+     * @return boolean
+     * @throws ReflectionException
+     */
+    function get_user_name()
+    {
+        return AuthService::instance()->getUserName();
+    }
+}
+////////////////将弃用////////////////////////
 if (!function_exists('get_admin_id')) {
     /**
      * 获取当前管理员ID
@@ -51,7 +88,7 @@ if (!function_exists('get_admin_id')) {
      */
     function get_admin_id()
     {
-        return AuthService::instance()->getAdminId();
+        return AuthService::instance()->getUserId();
     }
 }
 if (!function_exists('get_admin_name')) {
@@ -63,9 +100,10 @@ if (!function_exists('get_admin_name')) {
      */
     function get_admin_name()
     {
-        return AuthService::instance()->getAdminName();
+        return AuthService::instance()->getUserName();
     }
 }
+///////////////////////////////////////////
 if (!function_exists('auth')) {
     /**
      * 访问权限检查

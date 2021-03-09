@@ -87,7 +87,7 @@ class Library extends Service
                 // 访问模式及访问权限检查
                 if ($request->isOptions()) {
                     return response()->code(204)->header($header);
-                } elseif (AuthService::instance()->check()) {
+                } elseif (AuthService::instance()->check() || env('APP_DEBUG')) {
                     return $next($request)->header($header);
                 } elseif (AuthService::instance()->isLogin()) {
                     return json(['code' => 0, 'msg' => lang('not_auth')])->header($header);
