@@ -46,7 +46,7 @@ class ConfigService extends Service
         } else {
             $this->data = [];
             $data = ['name' => $field, 'value' => $value, 'type' => $type];
-            $this->save('AdminConfig', $data, 'name', ['type' => $type]);
+            $this->save('CoreConfig', $data, 'name', ['type' => $type]);
         }
         return $this;
     }
@@ -62,7 +62,7 @@ class ConfigService extends Service
     public function get($name)
     {
         [$type, $field, $outer] = $this->parse($name);
-        if (empty($this->data)) foreach ($this->app->db->name('AdminConfig')->select() as $vo) {
+        if (empty($this->data)) foreach ($this->app->db->name('CoreConfig')->select() as $vo) {
             $this->data[$vo['type']][$vo['name']] = $vo['value'];
         }
         if (empty($name)) {
@@ -109,7 +109,7 @@ class ConfigService extends Service
      */
     public function dolog($action, $content)
     {
-        return $this->app->db->name('AdminOperation')->insert([
+        return $this->app->db->name('CoreOperation')->insert([
             'node'     => NodeService::instance()->getCurrent(),
             'action'   => $action,
             'content'  => $content,
@@ -140,7 +140,7 @@ class ConfigService extends Service
     public function checkRunMode($type = 'dev')
     {
         $domain = $this->app->request->host(true);
-        $isDemo = is_numeric(stripos($domain, 'start-admin.com'));
+        $isDemo = is_numeric(stripos($domain, 'www.start-admin.com'));
         $isLocal = in_array($domain, ['127.0.0.1', 'localhost']);
         if ($type === 'dev') return $isLocal || $isDemo;
         if ($type === 'demo') return $isDemo;

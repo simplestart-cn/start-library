@@ -8,5 +8,5 @@ use start\Model;
  */
 class Menu extends Model
 {
-	protected $name = 'admin_menu';
+	protected $name = 'core_menu';
 }

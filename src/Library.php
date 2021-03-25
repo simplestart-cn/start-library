@@ -92,7 +92,7 @@ class Library extends Service
                 } elseif (AuthService::instance()->isLogin()) {
                     return json(['code' => 0, 'msg' => lang('not_auth')])->header($header);
                 } else {
-                    return json(['code' => -1, 'msg' => lang('not_login'), 'url' => url('admin/index/index')])->header($header);
+                    return json(['code' => -1, 'msg' => lang('not_login'), 'url' => url('core/index/index')])->header($header);
                 }
             }, 'route');
         }

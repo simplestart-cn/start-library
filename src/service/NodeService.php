@@ -140,7 +140,7 @@ class NodeService extends Service
         $apps = [];
         foreach (glob("{$path}*") as $item) {
             if (is_dir($item)) {
-                $item = explode('\\', $item);
+                $item = explode(DIRECTORY_SEPARATOR, $item);
                 array_push($apps, end($item));
             }
         }
@@ -163,18 +163,36 @@ class NodeService extends Service
             $data = [];
         }
         $ignores = get_class_methods('\start\Controller');
-        $directory = empty($app) ? $this->app->getBasePath() : $this->app->getBasePath() . $app . DIRECTORY_SEPARATOR;
+        if(empty($app)){
+            $directory = $this->app->getBasePath();
+        }else {
+            $directory = $app === 'core' ? $this->app->getRootPath() . $app . DIRECTORY_SEPARATOR : $this->app->getBasePath() . $app . DIRECTORY_SEPARATOR;
+        }
         foreach ($this->_scanDirectory($directory) as $file) {
-            if (preg_match("|/(\w+)/(\w+)/controller/(.+)\.php$|i", $file, $matches)) {
-                list(, $namespace, $appname, $classname) = $matches;
-                $class = new \ReflectionClass(strtr("{$namespace}/{$appname}/controller/{$classname}", '/', '\\'));
-                $prefix = strtr("{$appname}/{$this->nameTolower($classname)}", '\\', '/');
-                $data[$prefix] = $this->_parseComment($class->getDocComment(), $classname);
-                foreach ($class->getMethods(\ReflectionMethod::IS_PUBLIC) as $method) {
-                    if (in_array($metname = $method->getName(), $ignores)) continue;
-                    $data["{$prefix}/{$metname}"] = $this->_parseComment($method->getDocComment(), $metname);
+            if($app === 'core'){
+                if (preg_match("|/(\w+)/controller/(.+)\.php$|i", $file, $matches)) {
+                    list(, $namespace, $classname) = $matches;
+                    $class = new \ReflectionClass(strtr("{$namespace}/controller/{$classname}", '/', '\\'));
+                    $prefix = strtr("{$namespace}/{$this->nameTolower($classname)}", '\\', '/');
+                    $data[$prefix] = $this->_parseComment($class->getDocComment(), $classname);
+                    foreach ($class->getMethods(\ReflectionMethod::IS_PUBLIC) as $method) {
+                        if (in_array($metname = $method->getName(), $ignores)) continue;
+                        $data["{$prefix}/{$metname}"] = $this->_parseComment($method->getDocComment(), $metname);
+                    }
+                }
+            }else{
+                if (preg_match("|/(\w+)/(\w+)/controller/(.+)\.php$|i", $file, $matches)) {
+                    list(, $namespace, $appname, $classname) = $matches;
+                    $class = new \ReflectionClass(strtr("{$namespace}/{$appname}/controller/{$classname}", '/', '\\'));
+                    $prefix = strtr("{$appname}/{$this->nameTolower($classname)}", '\\', '/');
+                    $data[$prefix] = $this->_parseComment($class->getDocComment(), $classname);
+                    foreach ($class->getMethods(\ReflectionMethod::IS_PUBLIC) as $method) {
+                        if (in_array($metname = $method->getName(), $ignores)) continue;
+                        $data["{$prefix}/{$metname}"] = $this->_parseComment($method->getDocComment(), $metname);
+                    }
                 }
             }
+            
         }
         $data = array_change_key_case($data, CASE_LOWER);
         $this->app->cache->set('core_auth_node', $data);

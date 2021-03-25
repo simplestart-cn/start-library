@@ -78,32 +78,6 @@ if (!function_exists('get_user_name')) {
         return AuthService::instance()->getUserName();
     }
 }
-////////////////将弃用////////////////////////
-if (!function_exists('get_admin_id')) {
-    /**
-     * 获取当前管理员ID
-     * @param string $node
-     * @return boolean
-     * @throws ReflectionException
-     */
-    function get_admin_id()
-    {
-        return AuthService::instance()->getUserId();
-    }
-}
-if (!function_exists('get_admin_name')) {
-    /**
-     * 获取当前管理员名称
-     * @param string $node
-     * @return boolean
-     * @throws ReflectionException
-     */
-    function get_admin_name()
-    {
-        return AuthService::instance()->getUserName();
-    }
-}
-///////////////////////////////////////////
 if (!function_exists('auth')) {
     /**
      * 访问权限检查

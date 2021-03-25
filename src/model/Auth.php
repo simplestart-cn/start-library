@@ -8,7 +8,7 @@ use start\Model;
  */
 class Auth extends Model
 {
-	protected $name = 'admin_auth';
+	protected $name = 'core_auth';
 
 	public function nodes()
 	{
