@@ -128,7 +128,6 @@ class App
                 if (strpos($name, '.')) {
                     $name = strstr($name, '.', true);
                 }
-
                 if (isset($map[$name])) {
                     if ($map[$name] instanceof Closure) {
                         $result  = call_user_func_array($map[$name], [$this->app]);
@@ -141,8 +140,13 @@ class App
                 } elseif ($name && isset($map['*'])) {
                     $appName = $map['*'];
                 } else {
+
                     $appName = $name ?: $defaultApp;
-                    $appPath = $this->path ?: $this->app->getBasePath() . $appName . DIRECTORY_SEPARATOR;
+                    if($appName === 'core'){
+                        $appPath = $this->path ?: $this->app->getRootPath() . $appName . DIRECTORY_SEPARATOR;
+                    }else{
+                        $appPath = $this->path ?: $this->app->getBasePath() . $appName . DIRECTORY_SEPARATOR;
+                    }
 
                     if (!is_dir($appPath)) {
                         $express = $this->app->config->get('app.app_express', false);
@@ -154,7 +158,6 @@ class App
                         }
                     }
                 }
-
                 if ($name) {
                     $this->app->request->setRoot('/' . $name);
                     $this->app->request->setPathinfo(strpos($path, '/') ? ltrim(strstr($path, '/'), '/') : '');
@@ -191,13 +194,19 @@ class App
     {
         $this->appName = $appName;
         $this->app->http->name($appName);
-
-        $appPath = $this->path ?: $this->app->getBasePath() . $appName . DIRECTORY_SEPARATOR;
-
+        if($appName === 'core'){
+            $appPath = $this->path ?: $this->app->getRootPath() . $appName . DIRECTORY_SEPARATOR;
+        }else{
+            $appPath = $this->path ?: $this->app->getBasePath() . $appName . DIRECTORY_SEPARATOR;
+        }
+        
         $this->app->setAppPath($appPath);
         // 设置应用命名空间
-        $this->app->setNamespace($this->app->config->get('app.app_namespace') ?: 'app\\' . $appName);
-
+        if($appName === 'core'){
+            $this->app->setNamespace('core');
+        }else{
+            $this->app->setNamespace($this->app->config->get('app.app_namespace') ?: 'app\\' . $appName);
+        }
         if (is_dir($appPath)) {
             $this->app->setRuntimePath($this->app->getRuntimePath() . $appName . DIRECTORY_SEPARATOR);
             $this->app->http->setRoutePath($this->getRoutePath());
