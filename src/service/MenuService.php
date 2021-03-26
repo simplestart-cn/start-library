@@ -33,14 +33,14 @@ class MenuService extends Service
      * @param  [type] $calback [description]
      * @return [type]          [description]
      */
-    public static function getList($filter = [], $order = ['sort desc','id asc'])
+    public static function getList($filter = [], $order = ['sort desc', 'id asc'])
     {
         $self = self::instance();
-        if(AuthService::instance()->isOwner()){
+        if (AuthService::instance()->isOwner()) {
             return $self->model->list($filter, $order);
-        }else{
+        } else {
             $nodes = $self->app->session->get('user.nodes', []);
-            return $self->model->filter($filter)->where('node','in',$nodes)->order($order)->select();
+            return $self->model->filter($filter)->where('node', 'in', $nodes)->order($order)->select();
         }
     }
 
@@ -49,11 +49,11 @@ class MenuService extends Service
      * @return [type] [description]
      */
     public static function getTree()
-    { 
-        $self = self::instance();
+    {
+        $self  = self::instance();
         $menus = self::getList(['status' => 1]);
         $menus = DataExtend::arr2tree($menus->toArray());
-        if(count($menus) == 1 && isset($menus[0]['children'])){
+        if (count($menus) == 1 && isset($menus[0]['children'])) {
             $menus = $menus[0]['children'];
         }
         return $self->formatData($menus);
@@ -64,18 +64,18 @@ class MenuService extends Service
      * @return [type] [description]
      */
     public static function getAppMenu()
-    { 
-        $self = self::instance();
-        $data = self::getList(['status' => 1]);
-        $data = DataExtend::arr2tree($data->toArray());
-        $apps = $self->formatData($data);
+    {
+        $self   = self::instance();
+        $data   = self::getList(['status' => 1]);
+        $data   = DataExtend::arr2tree($data->toArray());
+        $apps   = $self->formatData($data);
         $access = array();
         foreach ($apps as $item) {
-            if(isset($item['children'])){
+            if (isset($item['children'])) {
                 $access = array_merge($access, $item['children']);
             }
         }
-        return compact('apps','access');
+        return compact('apps', 'access');
     }
 
     /**
@@ -93,25 +93,25 @@ class MenuService extends Service
             $temp['component'] = $data['component'] ?: 'layout';
             $temp['node']      = $data['node'];
             if ($data['hidden'] > -1) {
-                $temp['hidden'] = (boolean)$data['hidden'];
+                $temp['hidden'] = (boolean) $data['hidden'];
             }
             if ($data['is_menu'] > -1) {
-                $temp['is_menu'] = (boolean)$data['is_menu'];
+                $temp['is_menu'] = (boolean) $data['is_menu'];
             }
             if ($data['no_cache'] > -1) {
-                $temp['meta']['noCache'] = (boolean)$data['no_cache'];
+                $temp['meta']['noCache'] = (boolean) $data['no_cache'];
             }
             if ($data['redirect']) {
                 $temp['redirect'] = $data['redirect'];
             }
             // 路由参数拼接
-            if (!empty($data['params'])){
+            if (!empty($data['params'])) {
                 $temp['path'] .= $data['params'];
             }
             $temp['meta']['title'] = $data['title'];
             $temp['meta']['icon']  = $data['icon'];
             // 递归
-            if(isset($data['children']) && count($data['children']) > 0){
+            if (isset($data['children']) && count($data['children']) > 0) {
                 foreach ($data['children'] as $c) {
                     $temp['children'] = $this->formatData($data['children']);
                 }
@@ -123,14 +123,14 @@ class MenuService extends Service
 
     public static function save($input, $field = [])
     {
-        if(isset($input['id']) && !empty($input['id'])){
+        if (isset($input['id']) && !empty($input['id'])) {
             $model = self::getInfo($input['id']);
-            $list = self::getList();
-            $ids = DataExtend::getArrSubIds($list, $input['id']);
-            if(count($ids) > 0 && isset($input['status'])){
+            $list  = self::getList();
+            $ids   = DataExtend::getArrSubIds($list, $input['id']);
+            if (count($ids) > 0 && isset($input['status'])) {
                 self::saveChildren($ids, ['status' => $input['status']]);
             }
-        }else{
+        } else {
             $model = self::model();
         }
         return $model->allowField($field)->save($input);
@@ -147,13 +147,13 @@ class MenuService extends Service
         foreach ($ids as $id) {
             $item = ['id' => $id];
             foreach ($input as $key => $value) {
-                if($key !== 'id'){
-                    if(count($field) > 0){
+                if ($key !== 'id') {
+                    if (count($field) > 0) {
                         in_array($key, $field) && $item[$key] = $value;
-                    }else{
+                    } else {
                         $item[$key] = $value;
                     }
-                    
+
                 }
             }
             $data[] = $item;
@@ -168,29 +168,34 @@ class MenuService extends Service
      */
     public function building($app = '')
     {
-        $nodes = NodeService::instance()->getAll($app, true);
+        $nodes     = NodeService::instance()->getAll($app, true);
         $lastNodes = $this->model->select()->toArray();
         foreach ($nodes as &$item) {
             foreach ($lastNodes as $last) {
                 // 保留可能编辑过的字段
-                if($last['node'] == $item['node']){
+                if ($last['node'] == $item['node']) {
                     $item['id']        = $last['id'];
+                    $item['pid']       = $last['pid'];
                     $item['icon']      = $last['icon'];
                     $item['sort']      = $last['sort'];
+                    $item['hidden']    = $last['hidden'];
+                    $item['status']    = $last['status'];
                     $item['params']    = $last['params'];
+                    $item['redirect']  = $last['redirect'];
+                    $item['no_cache']  = $last['no_cache'];
                     $item['component'] = $last['component'];
                     $item['condition'] = $last['condition'];
                     // 保留编辑过的上下级关系
-                    if($last['pid'] > 0){
+                    if ($last['pid'] > 0) {
                         $p_key = array_search($last['pid'], array_column($lastNodes, 'id'));
-                        if($item['pnode'] !== $lastNodes[$p_key]['node']){
+                        if ($item['pnode'] !== $lastNodes[$p_key]['node']) {
                             $item['pnode'] = $lastNodes[$p_key]['node'];
                         }
                     }
                 }
             }
         }
-        $menus =  $this->saveBuilding(DataExtend::arr2tree($nodes, 'node', 'pnode', 'children'), 0);
+        $menus = $this->saveBuilding(DataExtend::arr2tree($nodes, 'node', 'pnode', 'children'), 0);
         return count($menus);
     }
 
@@ -203,32 +208,33 @@ class MenuService extends Service
     {
         $menus = array();
         foreach ($nodes as $key => &$data) {
-            $temp                    = [];
-            $temp['pid']             = $pid;
-            $temp['title']           = $data['title'];
-            $temp['name']            = str_replace('/', '_' , $data['node']);
-            $temp['node']            = $data['node'];
-            $temp['path']            = '/'.$data['node'];
-            $temp['hidden']          = false;
-            $temp['is_menu']         = (boolean)$data['ismenu'];
-            $temp['component']       = isset($data['component']) ? $data['component'] : '';
-            $temp['redirect']        = isset($data['redirect']) ? $data['redirect'] : '';
-            $temp['icon']            = isset($data['icon']) ? $data['icon'] : '';
-            $temp['no_cache']        = isset($data['no_cache']) ? (boolean)$data['no_cache'] : false;
-            if(isset($data['id'])){
+            $temp              = [];
+            $temp['pid']       = $pid;
+            $temp['title']     = $data['title'];
+            $temp['name']      = str_replace('/', '_', $data['node']);
+            $temp['node']      = $data['node'];
+            $temp['path']      = '/' . $data['node'];
+            $temp['is_menu']   = (boolean) $data['ismenu'];
+            $temp['sort']      = isset($data['sort']) ? $data['sort'] : 100;
+            $temp['hidden']    = isset($data['hidden']) ? $data['hidden'] : false;
+            $temp['status']    = isset($data['status']) ? $data['status'] : false;
+            $temp['component'] = isset($data['component']) ? $data['component'] : '';
+            $temp['redirect']  = isset($data['redirect']) ? $data['redirect'] : '';
+            $temp['icon']      = isset($data['icon']) ? $data['icon'] : '';
+            $temp['no_cache']  = isset($data['no_cache']) ? (boolean) $data['no_cache'] : false;
+            if (isset($data['id'])) {
                 $model = $this->model->find($data['id']);
                 $model->where(['id' => $data['id']])->save($temp);
-            }else{
+            } else {
                 $model = new $this->model;
                 $model->save($temp);
             }
-            if($model->id && isset($data['children']) && count($data['children']) > 0){
+            if ($model->id && isset($data['children']) && count($data['children']) > 0) {
                 $temp['children'] = $this->saveBuilding($data['children'], $model->id);
             }
-            $menus[] = $temp; 
+            $menus[] = $temp;
         }
         return $menus;
     }
 
-    
 }
