@@ -12,20 +12,12 @@
 
 namespace start;
 
-use start\helper\DeleteHelper;
-use start\helper\FormHelper;
-use start\helper\PageHelper;
-use start\helper\QueryHelper;
-use start\helper\SaveHelper;
+use think\App;
+use think\Request;
+use think\exception\HttpResponseException;
 use start\helper\TokenHelper;
 use start\helper\ValidateHelper;
-use think\App;
-use think\db\exception\DataNotFoundException;
-use think\db\exception\DbException;
-use think\db\exception\ModelNotFoundException;
-use think\db\Query;
-use think\exception\HttpResponseException;
-use think\Request;
+
 
 /**
  * 标准控制器基类
@@ -192,8 +184,13 @@ abstract class Controller extends \stdClass
      * @param string $strict 严格模式 ( 过滤未验证参数 )
      * @return array
      */
-    protected function formValidate(array $rules=[], $type = '', $strict = false)
+    protected function formValidate(array $rules=[], $type = '', $strict = true)
     {
+        if($type !== ''){
+            if(strtolower($this->app->request->method()) !== strtolower(str_replace('.', '', $type))){
+                throw_error(lang("method_limit", [strtoupper($type)]));
+            }
+        }
         return ValidateHelper::instance()->init($rules, $type, $strict);
     }
 
@@ -202,7 +199,7 @@ abstract class Controller extends \stdClass
      * @param boolean $return 是否返回结果
      * @return boolean
      */
-    protected function tokenValidate($return = false)
+    protected function tokenValidate($return = true)
     {
         return TokenHelper::instance()->init($return);
     }

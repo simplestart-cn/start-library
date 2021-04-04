@@ -160,7 +160,7 @@ class MenuService extends Service
         }
         return self::model()->saveAll($data);
     }
-
+    
     /**
      * 构建菜单
      * 并保留后台可编辑字段
@@ -169,9 +169,11 @@ class MenuService extends Service
     public function building($app = '')
     {
         $nodes     = NodeService::instance()->getAll($app, true);
-        $lastNodes = $this->model->select()->toArray();
+        $dbNodes = $this->model->select()->toArray();
+        $dbKeys = array_column($dbNodes, 'id');
         foreach ($nodes as &$item) {
-            foreach ($lastNodes as $last) {
+            $item['app'] = $app;
+            foreach ($dbNodes as $last) {
                 // 保留可能编辑过的字段
                 if ($last['node'] == $item['node']) {
                     $item['id']        = $last['id'];
@@ -186,10 +188,15 @@ class MenuService extends Service
                     $item['component'] = $last['component'];
                     $item['condition'] = $last['condition'];
                     // 保留编辑过的上下级关系
-                    if ($last['pid'] > 0) {
-                        $p_key = array_search($last['pid'], array_column($lastNodes, 'id'));
-                        if ($item['pnode'] !== $lastNodes[$p_key]['node']) {
-                            $item['pnode'] = $lastNodes[$p_key]['node'];
+                    if ($item['pid'] > 0) {
+                        $pkey = array_search($last['pid'], $dbKeys);
+                        $parent = $dbNodes[$pkey];
+                        $item['pnode'] = $parent['node'];
+                        if(!in_array($parent['node'], array_column($nodes, 'node'))){
+                            $ppkey = array_search($parent['pid'], $dbKeys);
+                            $parent['pnode'] = $ppkey > -1 ? $dbNodes[$ppkey]['node'] : '';
+                            $parent['ismenu'] = $ppkey > -1 ? $dbNodes[$ppkey]['is_menu'] : false;
+                            array_push($nodes, $parent);
                         }
                     }
                 }
@@ -210,6 +217,7 @@ class MenuService extends Service
         foreach ($nodes as $key => &$data) {
             $temp              = [];
             $temp['pid']       = $pid;
+            $temp['app']       = $data['app'];
             $temp['title']     = $data['title'];
             $temp['name']      = str_replace('/', '_', $data['node']);
             $temp['node']      = $data['node'];
@@ -217,7 +225,7 @@ class MenuService extends Service
             $temp['is_menu']   = (boolean) $data['ismenu'];
             $temp['sort']      = isset($data['sort']) ? $data['sort'] : 100;
             $temp['hidden']    = isset($data['hidden']) ? $data['hidden'] : false;
-            $temp['status']    = isset($data['status']) ? $data['status'] : false;
+            $temp['status']    = isset($data['status']) ? $data['status'] : true;
             $temp['component'] = isset($data['component']) ? $data['component'] : '';
             $temp['redirect']  = isset($data['redirect']) ? $data['redirect'] : '';
             $temp['icon']      = isset($data['icon']) ? $data['icon'] : '';
