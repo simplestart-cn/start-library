@@ -21,5 +21,6 @@ return [
     'remove_error'   => 'Data remove failed, please try again later.',
     'page_html'      => 'Total %s records, display %s per page, total %s page current display %s page.',
     'csrf_error'     => 'Token validation failed, please refresh and try again later.',
-    'method_limit'    => '%s method only.'
+    'method_limit'   => '%s method only.',
+    'unknow_config'   => 'Unknow config.'
 ];

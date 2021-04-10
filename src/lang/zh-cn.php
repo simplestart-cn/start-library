@@ -21,5 +21,6 @@ return [
     'remove_error'   => '数据删除失败, 请稍候再试~',
     'page_html'      => '共 %s 条记录，每页显示 %s 条，共 %s 页当前显示第 %s 页。',
     'csrf_error'     => '表单令牌验证失败，请刷新页面再试~',
-    'method_limit'    => '仅限 %s 方法.'
+    'method_limit'   => '仅限 %s 方法.',
+    'unknow_config'  => '未知配置'
 ];

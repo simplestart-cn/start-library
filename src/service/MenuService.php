@@ -121,7 +121,7 @@ class MenuService extends Service
         return $routers;
     }
 
-    public static function save($input, $field = [])
+    public static function update($input)
     {
         if (isset($input['id']) && !empty($input['id'])) {
             $model = self::getInfo($input['id']);
@@ -133,7 +133,7 @@ class MenuService extends Service
         } else {
             $model = self::model();
         }
-        return $model->allowField($field)->save($input);
+        return $model->save($input);
     }
 
     /**

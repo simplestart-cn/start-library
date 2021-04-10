@@ -100,12 +100,12 @@ if (!function_exists('conf')) {
      * @throws \think\db\exception\DbException
      * @throws \think\db\exception\ModelNotFoundException
      */
-    function conf($name = '', $value = null)
+    function conf($name = '', $value = null, $field = 'value')
     {
         if (is_null($value) && is_string($name)) {
             return ConfigService::instance()->get($name);
         } else {
-            return ConfigService::instance()->set($name, $value);
+            return ConfigService::instance()->set($name, $value, $field);
         }
     }
 }

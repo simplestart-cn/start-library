@@ -13,7 +13,7 @@
 namespace start\service;
 
 use start\Service;
-use think\db\Query;
+use think\facade\Cache;
 
 /**
  * 系统配置管理服务
@@ -23,6 +23,7 @@ use think\db\Query;
 class ConfigService extends Service
 {
 
+    public $model = 'start\model\Config';
     /**
      * 配置数据缓存
      * @var array
@@ -38,17 +39,18 @@ class ConfigService extends Service
      * @throws \think\db\exception\DbException
      * @throws \think\db\exception\ModelNotFoundException
      */
-    public function set($name, $value = '')
+    public function set($name, $value = '', $field = 'value')
     {
-        [$type, $field] = $this->parse($name);
-        if (is_array($value)) {
-            foreach ($value as $k => $v) $this->set("{$field}.{$k}", $v);
-        } else {
-            $this->data = [];
-            $data = ['name' => $field, 'value' => $value, 'type' => $type];
-            $this->save('CoreConfig', $data, 'name', ['type' => $type]);
+        list($app, $field) = $this->parse($name);
+        $model             = self::model()->where(compact('app', 'field'))->find();
+        if (!$model || $field === 'all') {
+            throw_error(lang('unknow_field'));
         }
-        return $this;
+        return $model->save([
+            'app'   => $app,
+            'field' => $field,
+            $field => $value,
+        ]);
     }
 
     /**
@@ -61,44 +63,36 @@ class ConfigService extends Service
      */
     public function get($name)
     {
-        [$type, $field, $outer] = $this->parse($name);
-        if (empty($this->data)) foreach ($this->app->db->name('CoreConfig')->select() as $vo) {
-            $this->data[$vo['type']][$vo['name']] = $vo['value'];
+        $config = Cache::get('core_config') ?: [];
+        if (!count($config)) {
+            foreach (self::model()->select() as $vo) {
+                $config[$vo['app']][$vo['field']] = $vo['value'];
+            }
+            Cache::set('core_config', $config);
         }
         if (empty($name)) {
-            return empty($this->data[$type]) ? [] : ($outer === 'raw' ? $this->data[$type] : array_map(function ($value) {
-                return htmlspecialchars($value);
-            }, $this->data[$type]));
-        } else {
-            if (isset($this->data[$type])) {
-                if ($field) {
-                    if (isset($this->data[$type][$field])) {
-                        return $outer === 'raw' ? $this->data[$type][$field] : htmlspecialchars($this->data[$type][$field]);
-                    }
-                } else {
-                    if ($outer === 'raw') foreach ($this->data[$type] as $key => $vo) {
-                        $this->data[$type][$key] = htmlspecialchars($vo);
-                    }
-                    return $this->data[$type];
-                }
-            }
-            return '';
+            return $config;
         }
+        list($app, $field) = $this->parse($name);
+        if ($field === 'all') {
+            return isset($config[$app]) ? $config[$app] : [];
+        }
+        return isset($config[$app][$field]) ? $config[$app][$field] : null;
     }
 
     /**
      * 解析缓存名称
-     * @param string $rule 配置名称
-     * @param string $type 配置类型
+     * @param string $name 配置名称
+     * @param string $app  应用名称
      * @return array
      */
-    private function parse($rule, $type = 'base')
+    private function parse($name, $app = 'core')
     {
-        if (stripos($rule, '.') !== false) {
-            [$type, $rule] = explode('.', $rule);
+        if (stripos($name, '.') !== false) {
+            [$app, $field] = explode('.', $name);
         }
-        [$field, $outer] = explode('|', "{$rule}|");
-        return [$type, $field, strtolower($outer)];
+        $field = isset($field) && !empty($field) ? $field : 'all';
+        return [strtolower($app), strtolower($field)];
     }
 
     /**
@@ -110,11 +104,11 @@ class ConfigService extends Service
     public function dolog($action, $content)
     {
         return $this->app->db->name('CoreOperation')->insert([
-            'node'     => NodeService::instance()->getCurrent(),
-            'action'   => $action,
-            'content'  => $content,
-            'geoip'    => $this->app->request->ip() ?: '127.0.0.1',
-            'user_id' => AuthService::instance()->getUserId() ?: 0,
+            'node'      => NodeService::instance()->getCurrent(),
+            'action'    => $action,
+            'content'   => $content,
+            'geoip'     => $this->app->request->ip() ?: '127.0.0.1',
+            'user_id'   => AuthService::instance()->getUserId() ?: 0,
             'user_name' => AuthService::instance()->getUserName() ?: '-',
         ]);
     }
@@ -125,9 +119,12 @@ class ConfigService extends Service
      * @param boolean $new 强制替换文件
      * @param string|null $file 文件名称
      */
-    public function putlog($data,  $file = null, $new = false)
+    public function putlog($data, $file = null, $new = false)
     {
-        if (is_null($file)) $file = $this->app->getRootPath() . 'runtime' . DIRECTORY_SEPARATOR . date('Ymd') . '.log';
+        if (is_null($file)) {
+            $file = $this->app->getRootPath() . 'runtime' . DIRECTORY_SEPARATOR . date('Ymd') . '.log';
+        }
+
         $str = (is_string($data) ? $data : ((is_array($data) || is_object($data)) ? print_r($data, true) : var_export($data, true))) . PHP_EOL;
         $new ? file_put_contents($file, $str) : file_put_contents($file, $str, FILE_APPEND);
     }
@@ -139,12 +136,21 @@ class ConfigService extends Service
      */
     public function checkRunMode($type = 'dev')
     {
-        $domain = $this->app->request->host(true);
-        $isDemo = is_numeric(stripos($domain, 'www.start-admin.com'));
+        $domain  = $this->app->request->host(true);
+        $isDemo  = is_numeric(stripos($domain, 'www.start-admin.com'));
         $isLocal = in_array($domain, ['127.0.0.1', 'localhost']);
-        if ($type === 'dev') return $isLocal || $isDemo;
-        if ($type === 'demo') return $isDemo;
-        if ($type === 'local') return $isLocal;
+        if ($type === 'dev') {
+            return $isLocal || $isDemo;
+        }
+
+        if ($type === 'demo') {
+            return $isDemo;
+        }
+
+        if ($type === 'local') {
+            return $isLocal;
+        }
+
         return true;
     }
 
@@ -173,12 +179,22 @@ class ConfigService extends Service
     {
         $data = $this->getRuntime();
         if (is_array($map) && count($map) > 0 && count($data['app_map']) > 0) {
-            foreach ($data['app_map'] as $kk => $vv) if (in_array($vv, $map)) unset($data['app_map'][$kk]);
+            foreach ($data['app_map'] as $kk => $vv) {
+                if (in_array($vv, $map)) {
+                    unset($data['app_map'][$kk]);
+                }
+            }
+
         }
         if (is_array($uri) && count($uri) > 0 && count($data['app_uri']) > 0) {
-            foreach ($data['app_uri'] as $kk => $vv) if (in_array($vv, $uri)) unset($data['app_uri'][$kk]);
+            foreach ($data['app_uri'] as $kk => $vv) {
+                if (in_array($vv, $uri)) {
+                    unset($data['app_uri'][$kk]);
+                }
+            }
+
         }
-        $file = "{$this->app->getRootPath()}runtime/config.json";
+        $file            = "{$this->app->getRootPath()}runtime/config.json";
         $data['app_run'] = is_null($run) ? $data['app_run'] : $run;
         $data['app_map'] = is_null($map) ? [] : array_merge($data['app_map'], $map);
         $data['app_uri'] = is_null($uri) ? [] : array_merge($data['app_uri'], $uri);
@@ -195,11 +211,23 @@ class ConfigService extends Service
     {
         $file = "{$this->app->getRootPath()}runtime/config.json";
         $data = file_exists($file) ? json_decode(file_get_contents($file), true) : [];
-        if (empty($data) || !is_array($data)) $data = [];
-        if (empty($data['app_map']) || !is_array($data['app_map'])) $data['app_map'] = [];
-        if (empty($data['app_uri']) || !is_array($data['app_uri'])) $data['app_uri'] = [];
-        if (empty($data['app_run']) || !is_string($data['app_run'])) $data['app_run'] = 'developer';
-        return is_null($key) ? $data : ($data[$key] ?? null);
+        if (empty($data) || !is_array($data)) {
+            $data = [];
+        }
+
+        if (empty($data['app_map']) || !is_array($data['app_map'])) {
+            $data['app_map'] = [];
+        }
+
+        if (empty($data['app_uri']) || !is_array($data['app_uri'])) {
+            $data['app_uri'] = [];
+        }
+
+        if (empty($data['app_run']) || !is_string($data['app_run'])) {
+            $data['app_run'] = 'developer';
+        }
+
+        return is_null($key) ? $data : (isset($data[$key]) ? $data[$key] : null);
     }
 
     /**
@@ -209,12 +237,20 @@ class ConfigService extends Service
      */
     public function bindRuntime($data = [])
     {
-        if (empty($data)) $data = $this->getRuntime();
+        if (empty($data)) {
+            $data = $this->getRuntime();
+        }
+
         // 动态绑定应用
         if (!empty($data['app_map'])) {
             $maps = $this->app->config->get('app.app_map', []);
             if (is_array($maps) && count($maps) > 0 && count($data['app_map']) > 0) {
-                foreach ($maps as $kk => $vv) if (in_array($vv, $data['app_map'])) unset($maps[$kk]);
+                foreach ($maps as $kk => $vv) {
+                    if (in_array($vv, $data['app_map'])) {
+                        unset($maps[$kk]);
+                    }
+                }
+
             }
             $this->app->config->set(['app_map' => array_merge($maps, $data['app_map'])], 'app');
         }
@@ -222,7 +258,12 @@ class ConfigService extends Service
         if (!empty($data['app_uri'])) {
             $uris = $this->app->config->get('app.domain_bind', []);
             if (is_array($uris) && count($uris) > 0 && count($data['app_uri']) > 0) {
-                foreach ($uris as $kk => $vv) if (in_array($vv, $data['app_uri'])) unset($uris[$kk]);
+                foreach ($uris as $kk => $vv) {
+                    if (in_array($vv, $data['app_uri'])) {
+                        unset($uris[$kk]);
+                    }
+                }
+
             }
             $this->app->config->set(['domain_bind' => array_merge($uris, $data['app_uri'])], 'app');
         }
