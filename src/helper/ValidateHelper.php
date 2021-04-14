@@ -92,14 +92,15 @@ class ValidateHelper extends Helper
         if($type !== '' && stripos($type, '.') === false){
             $type .= '.'; 
         }
-        list($data, $rule, $info, $alias) = [input('',[],'trim'), [], [], ''];
-        $strictFields = array();
+        list($input, $rule, $info, $alias) = [input('',[],'trim'), [], [], ''];
+        $data = $input;
+        $validFields = array();
         foreach ($rules as $name => $message) {
             if (stripos($name, '#') !== false) {
                 list($name, $alias) = explode('#', $name);
             }
             if (stripos($name, '.') === false) {
-                array_push($strictFields, $name);
+                array_push($validFields, $name);
                 if (is_numeric($name)) {
                     $field = $message;
                     if (is_string($message) && stripos($message, '#') !== false) {
@@ -113,7 +114,7 @@ class ValidateHelper extends Helper
             } else {
                 list($_rgx) = explode(':', $name);
                 list($_key, $_rule) = explode('.', $name);
-                array_push($strictFields, $_key);
+                array_push($validFields, $_key);
                 if (in_array($_rule, ['value', 'default'])) {
                     if ($_rule === 'value') {
                         $data[$_key] = $message;
@@ -121,17 +122,32 @@ class ValidateHelper extends Helper
                         $data[$_key] = input($type . ($alias ?: $_key), $message);
                     }
                 } else {
+                    if(stripos($_rgx, 'ifexist') !== false){
+                        $_rgx = str_replace('ifexist|', '', str_replace('|ifexist', '', $_rgx));
+                    }
                     $info[$_rgx] = $message;
                     $data[$_key] = $data[$_key] ?? input($type . ($alias ?: $_key));
                     $rule[$_key] = empty($rule[$_key]) ? $_rule : "{$rule[$_key]}|{$_rule}";
                 }
             }
         }
-        if($strict){
-            foreach ($data as $key => $value) {
-                if(!in_array($key, $strictFields)){
-                    unset($data[$key]);
+        
+        foreach ($data as $key => $value) {
+            // 仅验证存在的
+            if(isset($rule[$key])){
+                if(stripos($rule[$key], 'ifexist') !== false){
+                    if(isset($input[$key])){
+                       $rule[$key] = str_replace('ifexist|', '', str_replace('|ifexist', '', $rule[$key]));
+                    }else{
+                        unset($info[$key]);
+                        unset($rule[$key]);
+                        unset($data[$key]);   
+                    }
                 }
+            }
+            // 仅接收验证的
+            if($strict && !in_array($key, $validFields)){
+                unset($data[$key]);
             }
         }
         $validate = new Validate();
