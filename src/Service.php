@@ -23,16 +23,16 @@ use think\Container;
 abstract class Service
 {
     /**
-     * 服务名称
-     * @var [type]
-     */
-    protected $name;
-
-    /**
      * 应用实例
      * @var App
      */
     protected $app;
+
+    /**
+     * 服务名称
+     * @var [type]
+     */
+    protected $name;
 
     /**
      * 服务模型
@@ -53,15 +53,7 @@ abstract class Service
             $name       = str_replace('\\', '/', static::class);
             $this->name = basename($name);
         }
-        $this->initialize();
-    }
-
-    /**
-     * 初始化服务
-     * @return $this
-     */
-    protected function initialize()
-    {
+        // 绑定数据模型
         $namespace = $this->app->getNamespace();
         if (!empty($this->model)) {
             if (class_exists($this->model)) {
@@ -76,6 +68,15 @@ abstract class Service
                 $this->model = Container::getInstance()->make($object);
             }
         }
+        $this->initialize();
+    }
+
+    /**
+     * 初始化服务
+     * @return $this
+     */
+    protected function initialize()
+    {
         return $this;
     }
 

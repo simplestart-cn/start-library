@@ -17,7 +17,7 @@ use start\Service;
 /**
  * 表单令牌管理服务
  * Class TokenService
- * @package start\service
+ * @package start
  */
 class TokenService extends Service
 {

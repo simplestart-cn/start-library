@@ -3,8 +3,9 @@ declare (strict_types = 1);
 
 namespace start\model;
 use start\Model;
+
 /**
- * @mixin think\model
+ * @mixin start\model
  */
 class Auth extends Model
 {

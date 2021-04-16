@@ -17,7 +17,7 @@ use start\Service;
 /**
  * 图形验证码服务
  * Class CaptchaService
- * @package start\service
+ * @package start
  */
 class CaptchaService extends Service
 {

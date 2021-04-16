@@ -12,13 +12,13 @@
 
 namespace start\service;
 
-use start\extend\DataExtend;
 use start\Service;
+use start\extend\DataExtend;
 
 /**
  * 应用节点服务管理
  * Class NodeService
- * @package start\service
+ * @package start
  */
 class NodeService extends Service
 {
@@ -85,6 +85,7 @@ class NodeService extends Service
                     'pnode' => $pnode,
                     'isauth' => $method['isauth'],
                     'ismenu' => $method['ismenu'],
+                    'isview' => $method['isview'],
                     'islogin' => $method['islogin']
                 ];
             } elseif ($count === 1 && in_array($pnode, $pnodes)) {
@@ -94,6 +95,7 @@ class NodeService extends Service
                     'pnode' => $pnode,
                     'isauth' => $method['isauth'],
                     'ismenu' => $method['ismenu'],
+                    'isview' => $method['isview'],
                     'islogin' => $method['islogin']
                 ];
             }
@@ -106,6 +108,7 @@ class NodeService extends Service
                 'pnode' => $pnode,
                 'isauth' => $method['isauth'],
                 'ismenu' => $method['ismenu'],
+                'isview' => $method['isview'],
                 'islogin' => $method['islogin']
             ];
             $nodes[$pnode] = [
@@ -114,6 +117,7 @@ class NodeService extends Service
                 'pnode' => '',
                 'isauth' => $method['isauth'],
                 'ismenu' => $method['ismenu'],
+                'isview' => $method['isview'],
                 'islogin' => $method['islogin']
             ];
         }
@@ -157,7 +161,7 @@ class NodeService extends Service
     {
         static $data = [];
         if (!$force) {
-            $data = $this->app->cache->get('core_auth_node', []);
+            $data = $this->app->cache->get('start_auth_node', []);
             if (count($data) > 0) return $data;
         } else {
             $data = [];
@@ -195,7 +199,7 @@ class NodeService extends Service
             
         }
         $data = array_change_key_case($data, CASE_LOWER);
-        $this->app->cache->set('core_auth_node', $data);
+        $this->app->cache->set('start_auth_node', $data);
         return $data;
     }
 
@@ -207,15 +211,24 @@ class NodeService extends Service
      */
     private function _parseComment($comment, $default = '')
     {
+
         $text = strtr($comment, "\n", ' ');
         $title = preg_replace('/^\/\*\s*\*\s*\*\s*(.*?)\s*\*.*?$/', '$1', $text);
         foreach (['@auth', '@menu', '@login'] as $find) if (stripos($title, $find) === 0) {
             $title = $default;
         }
+        // 匹配设置的值$menu[1]
+        // preg_match('/@auth (.*?)\s/i', $text, $auth);
+        // preg_match('/@menu (.*?)\s/i', $text, $menu);
+        // preg_match('/@view (.*?)\s/i', $text, $view);
+        // preg_match('/@icon (.*?)\s/i', $text, $icon);
+        // preg_match('/@pnode (.*?)\s/i', $text, $parent);
+        
         return [
             'title'   => $title ? $title : $default,
             'isauth'  => intval(preg_match('/@auth\s*/i', $text)),
             'ismenu'  => intval(preg_match('/@menu\s*/i', $text)),
+            'isview'  => intval(preg_match('/@view\s*/i', $text)),
             'islogin' => intval(preg_match('/@login\s*/i', $text)),
         ];
     }

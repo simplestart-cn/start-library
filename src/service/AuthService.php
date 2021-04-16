@@ -12,8 +12,8 @@
 
 namespace start\service;
 
-use start\extend\DataExtend;
 use start\Service;
+use start\extend\DataExtend;
 use think\App;
 use think\facade\Cache;
 use think\facade\Session;
@@ -21,7 +21,7 @@ use think\facade\Session;
 /**
  * 系统权限管理服务
  * Class AuthService
- * @package start\service
+ * @package start
  */
 class AuthService extends Service
 {
@@ -76,6 +76,9 @@ class AuthService extends Service
      */
     public function getUser()
     {
+        if(!$this->user){
+            throw_error(lang('not_login'));
+        }
         return $this->user;
     }
 
@@ -83,12 +86,14 @@ class AuthService extends Service
      * 获取账户ID
      * @return integer
      */
-    public function getUserId()
+    public function getUserId($force = true)
     {
         if ($this->user) {
-            return intval($this->user['id']);
+            return $this->user['id'];
         }
-
+        if($force){
+            throw_error(lang('not_login'));
+        }
         return 0;
     }
 
@@ -96,12 +101,14 @@ class AuthService extends Service
      * 获取账户名称
      * @return string
      */
-    public function getUserName()
+    public function getUserName($force = true)
     {
         if ($this->user) {
-            return intval($this->user['name']);
+            return $this->user['name'];
         }
-
+        if($force){
+            throw_error(lang('not_login'));
+        }
         return '';
     }
 

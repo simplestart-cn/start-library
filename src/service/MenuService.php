@@ -12,8 +12,8 @@
 
 namespace start\service;
 
-use start\extend\DataExtend;
 use start\Service;
+use start\extend\DataExtend;
 
 /**
  * 系统菜单管理服务
@@ -36,11 +36,12 @@ class MenuService extends Service
     public static function getList($filter = [], $order = ['sort desc', 'id asc'])
     {
         $self = self::instance();
+        $apps = array_merge(AppService::getActive(), ['core']);
         if (AuthService::instance()->isOwner()) {
-            return $self->model->list($filter, $order);
+            return $self->model->filter($filter)->where('app','in', $apps)->order($order)->select();
         } else {
             $nodes = $self->app->session->get('user.nodes', []);
-            return $self->model->filter($filter)->where('node', 'in', $nodes)->order($order)->select();
+            return $self->model->filter($filter)->where('node', 'in', $nodes)->where('app','in', $apps)->order($order)->select();
         }
     }
 
@@ -48,10 +49,10 @@ class MenuService extends Service
      * 获取菜单树数据
      * @return [type] [description]
      */
-    public static function getTree()
+    public static function getTree($filter = ['status' => 1])
     {
         $self  = self::instance();
-        $menus = self::getList(['status' => 1]);
+        $menus = self::getList($filter);
         $menus = DataExtend::arr2tree($menus->toArray());
         if (count($menus) == 1 && isset($menus[0]['children'])) {
             $menus = $menus[0]['children'];
@@ -63,10 +64,10 @@ class MenuService extends Service
      * 获取菜应用菜单
      * @return [type] [description]
      */
-    public static function getAppMenu()
+    public static function getAppMenu($filter = ['status' => 1])
     {
         $self   = self::instance();
-        $data   = self::getList(['status' => 1]);
+        $data   = self::getList($filter);
         $data   = DataExtend::arr2tree($data->toArray());
         $apps   = $self->formatData($data);
         $access = array();
@@ -123,6 +124,9 @@ class MenuService extends Service
 
     public static function update($input)
     {
+        if (isset($input['node']) && empty($input['path'])) {
+            $input['path'] = $input['node'];
+        }
         if (isset($input['id']) && !empty($input['id'])) {
             $model = self::getInfo($input['id']);
             $list  = self::getList();
@@ -202,7 +206,15 @@ class MenuService extends Service
                 }
             }
         }
-        $menus = $this->saveBuilding(DataExtend::arr2tree($nodes, 'node', 'pnode', 'children'), 0);
+        // 设置app信息
+        $tree = DataExtend::arr2tree($nodes, 'node', 'pnode', 'children');
+        if(count($tree)){
+            $app = AppService::getPackInfo($app);
+            $tree[0]['icon'] = $app['icon'] ?? '';
+            $tree[0]['title'] = $app['title'] ?? $app['name'];
+        }
+        
+        $menus = $this->saveBuilding($tree, 0);
         return count($menus);
     }
 
@@ -226,7 +238,7 @@ class MenuService extends Service
             $temp['sort']      = isset($data['sort']) ? $data['sort'] : 100;
             $temp['hidden']    = isset($data['hidden']) ? $data['hidden'] : false;
             $temp['status']    = isset($data['status']) ? $data['status'] : true;
-            $temp['component'] = isset($data['component']) ? $data['component'] : '';
+            $temp['component'] = isset($data['component']) && !empty($data['component']) ? $data['component'] : $data['isview'] ? $data['node'] : '';
             $temp['redirect']  = isset($data['redirect']) ? $data['redirect'] : '';
             $temp['icon']      = isset($data['icon']) ? $data['icon'] : '';
             $temp['no_cache']  = isset($data['no_cache']) ? (boolean) $data['no_cache'] : false;

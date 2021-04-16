@@ -18,7 +18,7 @@ use think\facade\Cache;
 /**
  * 系统配置管理服务
  * Class ConfigService
- * @package start\service
+ * @package start
  */
 class ConfigService extends Service
 {
@@ -48,7 +48,6 @@ class ConfigService extends Service
         }
         return $model->save([
             'app'   => $app,
-            'field' => $field,
             $field => $value,
         ]);
     }
@@ -108,8 +107,8 @@ class ConfigService extends Service
             'action'    => $action,
             'content'   => $content,
             'geoip'     => $this->app->request->ip() ?: '127.0.0.1',
-            'user_id'   => AuthService::instance()->getUserId() ?: 0,
-            'user_name' => AuthService::instance()->getUserName() ?: '-',
+            'user_id'   => get_user_id() ?: 0,
+            'user_name' => get_user_name() ?: '-',
         ]);
     }
 
