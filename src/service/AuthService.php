@@ -77,7 +77,7 @@ class AuthService extends Service
     public function getUser()
     {
         if(!$this->user){
-            throw_error(lang('not_login'));
+            throw_error(lang('not_login'), '', -1);
         }
         return $this->user;
     }
@@ -92,7 +92,7 @@ class AuthService extends Service
             return $this->user['id'];
         }
         if($force){
-            throw_error(lang('not_login'));
+            throw_error(lang('not_login'), '', -1);
         }
         return 0;
     }
@@ -107,7 +107,7 @@ class AuthService extends Service
             return $this->user['name'];
         }
         if($force){
-            throw_error(lang('not_login'));
+            tthrow_error(lang('not_login'), '', -1);
         }
         return '';
     }
