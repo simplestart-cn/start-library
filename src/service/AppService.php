@@ -126,59 +126,6 @@ class AppService extends Service
     }
 
     /**
-     * 删除安装包
-     * @param  array  $input [description]
-     * @return [type]        [description]
-     */
-    public static function remove($input = [])
-    {
-        $path = self::instance()->app->getBasePath() . $input['name'] . DIRECTORY_SEPARATOR;
-        return self::_removeFolder($path);
-    }
-
-    /**
-     * 删除文件或文件夹
-     * @param  [type] $path [description]
-     * @return [type]       [description]
-     */
-    private static function _removeFolder($path)
-    {
-        if (is_dir($path)) {
-            if (!$handle = @opendir($path)) {
-                throw_error($handle);
-            }
-            while (false !== ($file = readdir($handle))) {
-                if ($file !== "." && $file !== "..") {
-                    //排除当前目录与父级目录
-                    $file = $path . DIRECTORY_SEPARATOR . $file;
-                    if (is_dir($file)) {
-                        self::_removeFolder($file);
-                        //目录清空后删除空文件夹
-                        @rmdir($file . DIRECTORY_SEPARATOR);
-                    } else {
-                        @unlink($file);
-                    }
-                }
-            }
-            try {
-                return rmdir($path);
-            } catch (\Exception $e) {
-                $msg = explode(': ', $e->getMessage())[1];
-                throw_error($msg);
-            }
-        }
-        if (is_file($path)) {
-            try {
-                return unlink($path);
-            } catch (\Exception $e) {
-                $msg = explode(': ', $e->getMessage())[1];
-                throw_error($msg);
-            }
-        }
-        return true;
-    }
-
-    /**
      * 下载(待完成)
      * @param  [type] $app [description]
      * @return [type]      [description]
@@ -203,7 +150,7 @@ class AppService extends Service
             }
         }
         if (self::getInfo(['name' => $name])) {
-            throw_error(lang('app_already_exit'));
+            throw_error(lang('app_already_exist'));
         }
         $model = self::model();
         self::startTrans();
@@ -249,13 +196,9 @@ class AppService extends Service
         self::startTrans();
         try {
             // 删除权限菜单
-            MenuService::model()->where(['app' => $name])->delete();
+            MenuService::model()->where(['app' => $name])->save(['status' => 0]);
             // 删除全局配置
             ConfigService::model()->where(['app' => $name])->delete();
-            // 删除数据表
-            // .....
-            //
-            //
             // 删除应用记录
             $model->remove();
             self::startCommit();
@@ -265,6 +208,65 @@ class AppService extends Service
             throw_error($e->getMessage());
             return false;
         }
+    }
+
+    /**
+     * 删除安装包
+     * @param  array  $input [description]
+     * @return [type]        [description]
+     */
+    public static function remove($input = [])
+    {
+        // 删除对应数据表
+        // ....
+        // ...
+        // 删除权限菜单
+        MenuService::model()->where(['app' => $name])->delete();
+        // 删除应用目录
+        $path = self::instance()->app->getBasePath() . $input['name'] . DIRECTORY_SEPARATOR;
+        return self::_removeFolder($path);
+    }
+
+    /**
+     * 删除文件或文件夹
+     * @param  [type] $path [description]
+     * @return [type]       [description]
+     */
+    private static function _removeFolder($path)
+    {
+        if (is_dir($path)) {
+            if (!$handle = @opendir($path)) {
+                throw_error($handle);
+            }
+            while (false !== ($file = readdir($handle))) {
+                if ($file !== "." && $file !== "..") {
+                    //排除当前目录与父级目录
+                    $file = $path . DIRECTORY_SEPARATOR . $file;
+                    if (is_dir($file)) {
+                        self::_removeFolder($file);
+                        //目录清空后删除空文件夹
+                        @rmdir($file . DIRECTORY_SEPARATOR);
+                    } else {
+                        @unlink($file);
+                    }
+                }
+            }
+            try {
+                return rmdir($path);
+            } catch (\Exception $e) {
+                $msg = explode(': ', $e->getMessage())[1];
+                throw_error($msg);
+            }
+        }
+        if (is_file($path)) {
+            try {
+                return unlink($path);
+            } catch (\Exception $e) {
+                $msg = explode(': ', $e->getMessage())[1];
+                throw_error($msg);
+            }
+        }
+        return true;
     }
 
     /**

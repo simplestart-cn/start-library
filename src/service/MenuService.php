@@ -122,6 +122,11 @@ class MenuService extends Service
         return $routers;
     }
 
+    /**
+     * 更新自身及下级菜单
+     * @param  [type] $input [description]
+     * @return [type]        [description]
+     */
     public static function update($input)
     {
         if (isset($input['node']) && empty($input['path'])) {
@@ -138,6 +143,45 @@ class MenuService extends Service
             $model = self::model();
         }
         return $model->save($input);
+    }
+
+    /**
+     * 删除自身及下级菜单
+     * @param  [type] $input [description]
+     * @return [type]        [description]
+     */
+    public static function remove($filter)
+    {
+        if (is_string($filter) && strstr($filter, ',') !== false) {
+            $filter = explode(',', $filter);
+        }
+        $model = self::model();
+
+        self::startTrans();
+        try{
+            if (!is_array($filter)) {
+                // 删除子菜单
+                $subIds = self::model()->where('pid', '=', $filter)->column('id');
+                if(count($subIds)){
+                    self::remove($subIds);
+                }
+                // 删除当前记录
+                $model->find($filter)->delete();
+            } else {
+                // 删除子菜单
+                $subIds = self::model()->where('pid','in',$filter)->column('id');
+                if(count($subIds)){
+                    self::remove($subIds);
+                }
+                // 删除当前记录
+                $model->where($model->getPk(), 'in', $filter)->delete();
+            }
+            self::startCommit();
+            return true;
+        }catch(\Exception $e){
+            self::startRollback();
+            throw_error($e->getMessage());
+        }
     }
 
     /**

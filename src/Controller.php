@@ -102,10 +102,11 @@ abstract class Controller extends \stdClass
      */
     public function success($msg, $data = '{-null-}', $code = 1)
     {
+
         if ($this->csrf_state) {
             TokenHelper::instance()->clear();
         }
-        if(is_array($msg) || is_object($msg)){
+        if(is_array($msg) || is_object($msg) || is_null($msg)){
             $data = $msg;
             $msg = 'ok';
         }

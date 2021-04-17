@@ -190,22 +190,6 @@ abstract class Service
     }
 
     /**
-     * 更新记录(将弃用)
-     * @param [type] $input  [description]
-     * @param array  $field [description]
-     */
-    public static function save($input)
-    {
-        $model = self::model();
-        $pk    = $model->getPk();
-        if (isset($input[$pk])) {
-            return $model->update($input);
-        } else {
-            return $model->save($input);
-        }
-    }
-
-    /**
      * 删除记录
      * @param  [type] $filter [description]
      * @return [type]         [description]

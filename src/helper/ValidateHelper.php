@@ -119,7 +119,11 @@ class ValidateHelper extends Helper
                     if ($_rule === 'value') {
                         $data[$_key] = $message;
                     } elseif ($_rule === 'default') {
-                        $data[$_key] = input($type . ($alias ?: $_key), $message);
+                        if(isset($input[$_key]) || isset($input[$_key])){
+                            $data[$_key] = input($type . ($alias ?: $_key));
+                        }else if($message !== '' && $message !== null){
+                            $data[$_key] = $message;
+                        }
                     }
                 } else {
                     if(stripos($_rgx, 'ifexist') !== false){
