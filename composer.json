@@ -1,7 +1,7 @@
 {
     "name": "simplestart/start-library",
     "description": "Simplestart Library For Thinkphp V6.0 ",
-    "version": "v1.0.7",
+    "version": "v1.0.8",
     "type": "library",
     "license": "Apache-2.0",
     "authors": [
