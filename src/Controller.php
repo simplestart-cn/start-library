@@ -69,7 +69,7 @@ abstract class Controller extends \stdClass
         if (in_array($this->request->action(), get_class_methods(__CLASS__))) {
             $this->error('Access without permission.');
         }
-        $this->csrf_message = lang('start_csrf_error');
+        $this->csrf_message = lang('csrf_error');
         $this->initialize();
     }
 
@@ -185,7 +185,7 @@ abstract class Controller extends \stdClass
      * @param string $strict 严格模式 ( 过滤未验证参数 )
      * @return array
      */
-    protected function formValidate(array $rules=[], $type = '', $strict = true)
+    protected function formValidate(array $rules=[], $type = '', $strict = false)
     {
         if($type !== ''){
             if(strtolower($this->app->request->method()) !== strtolower(str_replace('.', '', $type))){
