@@ -121,7 +121,7 @@ class ValidateHelper extends Helper
                     } elseif ($_rule === 'default') {
                         if(isset($input[$_key]) || isset($input[$_key])){
                             $data[$_key] = input($type . ($alias ?: $_key));
-                        }else if($message !== '' && $message !== null){
+                        }else if($message !== null){
                             $data[$_key] = $message;
                         }
                     }
