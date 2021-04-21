@@ -217,20 +217,22 @@ class NodeService extends Service
         foreach (['@auth', '@menu', '@login'] as $find) if (stripos($title, $find) === 0) {
             $title = $default;
         }
-        // 匹配设置的值$menu[1]
-        // preg_match('/@auth (.*?)\s/i', $text, $auth);
-        // preg_match('/@menu (.*?)\s/i', $text, $menu);
-        // preg_match('/@view (.*?)\s/i', $text, $view);
-        // preg_match('/@icon (.*?)\s/i', $text, $icon);
-        // preg_match('/@pnode (.*?)\s/i', $text, $parent);
-        
-        return [
+        $method =  [
             'title'   => $title ? $title : $default,
             'isauth'  => intval(preg_match('/@auth\s*/i', $text)),
             'ismenu'  => intval(preg_match('/@menu\s*/i', $text)),
             'isview'  => intval(preg_match('/@view\s*/i', $text)),
             'islogin' => intval(preg_match('/@login\s*/i', $text)),
         ];
+        // 匹配设置的menu值
+        if($method['ismenu']){
+            preg_match('/@menu\s\[(.*?)\]\s/i', $text, $menu);
+            if(count($menu) > 1){
+                $menu = '{'.str_replace('=>',':',str_replace("'", '"', preg_replace("/\s/i", '', $menu[1]))).'}';
+                $method['ismenu'] = json_decode($menu, true);
+            }
+        }
+        return $method;
     }
 
     /**

@@ -12,8 +12,8 @@
 
 namespace start\service;
 
-use start\Service;
 use start\extend\DataExtend;
+use start\Service;
 
 /**
  * 系统菜单管理服务
@@ -36,12 +36,11 @@ class MenuService extends Service
     public static function getList($filter = [], $order = ['sort desc', 'id asc'])
     {
         $self = self::instance();
-        $apps = array_merge(AppService::getActive(), ['core']);
         if (AuthService::instance()->isOwner()) {
-            return $self->model->filter($filter)->where('app','in', $apps)->order($order)->select();
+            return $self->model->filter($filter)->order($order)->select();
         } else {
-            $nodes = $self->app->session->get('user.nodes', []);
-            return $self->model->filter($filter)->where('node', 'in', $nodes)->where('app','in', $apps)->order($order)->select();
+            $user = get_user();
+            return $self->model->filter($filter)->where('node', 'in', $user['nodes'])->order($order)->select();
         }
     }
 
@@ -61,22 +60,23 @@ class MenuService extends Service
     }
 
     /**
-     * 获取菜应用菜单
-     * @return [type] [description]
+     * 获取应用菜单
+     * @param  string $app [应用名]
+     * @return [type]      [菜单树]
      */
-    public static function getAppMenu($filter = ['status' => 1])
+    public static function getAppMenu($app = '')
     {
-        $self   = self::instance();
-        $data   = self::getList($filter);
-        $data   = DataExtend::arr2tree($data->toArray());
-        $apps   = $self->formatData($data);
-        $access = array();
-        foreach ($apps as $item) {
-            if (isset($item['children'])) {
-                $access = array_merge($access, $item['children']);
-            }
+        $self             = self::instance();
+        $filter['status'] = 1;
+        if (empty($app)) {
+            $apps          = array_merge(AppService::getActive(), ['core']);
+            $filter['app'] = ['in', $apps];
+        } else {
+            $filter['app'] = $app;
         }
-        return compact('apps', 'access');
+        $data = self::getList($filter);
+        $data = DataExtend::arr2tree($data->toArray());
+        return $self->formatData($data);
     }
 
     /**
@@ -158,19 +158,19 @@ class MenuService extends Service
         $model = self::model();
 
         self::startTrans();
-        try{
+        try {
             if (!is_array($filter)) {
                 // 删除子菜单
                 $subIds = self::model()->where('pid', '=', $filter)->column('id');
-                if(count($subIds)){
+                if (count($subIds)) {
                     self::remove($subIds);
                 }
                 // 删除当前记录
                 $model->find($filter)->delete();
             } else {
                 // 删除子菜单
-                $subIds = self::model()->where('pid','in',$filter)->column('id');
-                if(count($subIds)){
+                $subIds = self::model()->where('pid', 'in', $filter)->column('id');
+                if (count($subIds)) {
                     self::remove($subIds);
                 }
                 // 删除当前记录
@@ -178,7 +178,7 @@ class MenuService extends Service
             }
             self::startCommit();
             return true;
-        }catch(\Exception $e){
+        } catch (\Exception $e) {
             self::startRollback();
             throw_error($e->getMessage());
         }
@@ -208,7 +208,7 @@ class MenuService extends Service
         }
         return self::model()->saveAll($data);
     }
-    
+
     /**
      * 构建菜单
      * 并保留后台可编辑字段
@@ -216,50 +216,71 @@ class MenuService extends Service
      */
     public function building($app = '')
     {
-        $nodes     = NodeService::instance()->getAll($app, true);
-        $dbNodes = $this->model->select()->toArray();
-        $dbKeys = array_column($dbNodes, 'id');
+        $nodes    = NodeService::instance()->getAll($app, true);
+        $dbNodes  = $this->model->select()->toArray();
+        $nodeIds  = array_column($dbNodes, 'id');
+        $nodeKeys = array_column($dbNodes, 'node');
+        $nodeList = array();
         foreach ($nodes as &$item) {
-            $item['app'] = $app;
+            // 格式化
+            $temp['app']    = $app;
+            $temp['name']   = str_replace('/', '_', $item['node']);
+            $temp['icon']   = $item['ismenu']['icon'] ?? '';
+            $temp['sort']   = $item['ismenu']['sort'] ?? 100;
+            $temp['title']  = $item['ismenu']['title'] ?? $item['title'];
+            $temp['status'] = $item['ismenu']['status'] ?? true;
+            $temp['params'] = $item['ismenu']['params'] ?? '';
+            $temp['node']   = $item['node'];
+            $temp['pnode']  = $item['ismenu']['pnode'] ?? $item['pnode'];
+            $temp['path']      = '/' . $item['node'];
+            $temp['is_menu']   = (boolean)$item['ismenu'];
+            $temp['component'] = isset($item['isview']) ? $item['node'] : '';
+            $temp['redirect']  = '';
+            $temp['hidden']    = false;
+            $temp['no_cache']  = false;
+
             foreach ($dbNodes as $last) {
                 // 保留可能编辑过的字段
                 if ($last['node'] == $item['node']) {
-                    $item['id']        = $last['id'];
-                    $item['pid']       = $last['pid'];
-                    $item['icon']      = $last['icon'];
-                    $item['sort']      = $last['sort'];
-                    $item['hidden']    = $last['hidden'];
-                    $item['status']    = $last['status'];
-                    $item['params']    = $last['params'];
-                    $item['redirect']  = $last['redirect'];
-                    $item['no_cache']  = $last['no_cache'];
-                    $item['component'] = $last['component'];
-                    $item['condition'] = $last['condition'];
-                    // 保留编辑过的上下级关系
-                    if ($item['pid'] > 0) {
-                        $pkey = array_search($last['pid'], $dbKeys);
-                        $parent = $dbNodes[$pkey];
-                        $item['pnode'] = $parent['node'];
-                        if(!in_array($parent['node'], array_column($nodes, 'node'))){
-                            $ppkey = array_search($parent['pid'], $dbKeys);
-                            $parent['pnode'] = $ppkey > -1 ? $dbNodes[$ppkey]['node'] : '';
+                    $temp['id']        = $last['id'];
+                    $temp['pid']       = $last['pid'];
+                    $temp['icon']      = $last['icon'] ?? $temp['icon'];
+                    $temp['sort']      = $last['sort'] == 100 ? $last['sort'] : $temp['sort'];
+                    $temp['params']    = $last['params'] ?? $temp['params'];
+                    $temp['hidden']    = $last['hidden'];
+                    $temp['redirect']  = $last['redirect'];
+                    $temp['no_cache']  = $last['no_cache'];
+                    $temp['component'] = $last['component'] ?? $temp['component'];
+                    $temp['condition'] = $last['condition'];
+                }
+                // 尝试寻找上级
+                if (!empty($temp['pnode'])) {
+                    $pkey = array_search($temp['pnode'], $nodeKeys);
+                    if ($pkey > -1) {
+                        $parent        = $dbNodes[$pkey];
+                        $temp['pid']   = $parent['id'];
+                        $temp['pnode'] = $parent['node'];
+                        // 引入上级
+                        if (!in_array($parent['node'], array_column($nodes, 'node'))) {
+                            $ppkey            = array_search($parent['pid'], $nodeIds);
+                            $parent['pnode']  = $ppkey > -1 ? $dbNodes[$ppkey]['node'] : '';
                             $parent['ismenu'] = $ppkey > -1 ? $dbNodes[$ppkey]['is_menu'] : false;
                             array_push($nodes, $parent);
+                            array_push($nodeList, $parent);
                         }
                     }
                 }
             }
+            array_push($nodeList, $temp);
         }
         // 设置app信息
-        $tree = DataExtend::arr2tree($nodes, 'node', 'pnode', 'children');
-        if(count($tree)){
-            $app = AppService::getPackInfo($app);
-            $tree[0]['icon'] = $app['icon'] ?? '';
+        $tree = DataExtend::arr2tree($nodeList, 'node', 'pnode', 'children');
+        if (count($tree) && $app = AppService::getPackInfo($app)) {
+            $tree[0]['icon']  = $app['icon'] ?? '';
             $tree[0]['title'] = $app['title'] ?? $app['name'];
         }
-        
         $menus = $this->saveBuilding($tree, 0);
-        return count($menus);
+        return $menus;
     }
 
     /**
@@ -271,24 +292,28 @@ class MenuService extends Service
     {
         $menus = array();
         foreach ($nodes as $key => &$data) {
-            $temp              = [];
+            $temp              = $data;
             $temp['pid']       = $pid;
-            $temp['app']       = $data['app'];
-            $temp['title']     = $data['title'];
-            $temp['name']      = str_replace('/', '_', $data['node']);
-            $temp['node']      = $data['node'];
-            $temp['path']      = '/' . $data['node'];
-            $temp['is_menu']   = (boolean) $data['ismenu'];
-            $temp['sort']      = isset($data['sort']) ? $data['sort'] : 100;
-            $temp['hidden']    = isset($data['hidden']) ? $data['hidden'] : false;
-            $temp['status']    = isset($data['status']) ? $data['status'] : true;
-            $temp['component'] = isset($data['component']) && !empty($data['component']) ? $data['component'] : $data['isview'] ? $data['node'] : '';
-            $temp['redirect']  = isset($data['redirect']) ? $data['redirect'] : '';
-            $temp['icon']      = isset($data['icon']) ? $data['icon'] : '';
-            $temp['no_cache']  = isset($data['no_cache']) ? (boolean) $data['no_cache'] : false;
-            if (isset($data['id'])) {
-                $model = $this->model->find($data['id']);
-                $model->where(['id' => $data['id']])->save($temp);
+            unset($temp['pnode']);
+            unset($temp['children']);
+
+            // $temp['app']       = $data['app'];
+            // $temp['title']     = $data['title'];
+            // $temp['name']      = str_replace('/', '_', $data['node']);
+            // $temp['node']      = $data['node'];
+            // $temp['path']      = '/' . $data['node'];
+            // $temp['is_menu']   = (boolean) $data['ismenu'];
+            // $temp['sort']      = isset($data['sort']) ? $data['sort'] : 100;
+            // $temp['hidden']    = isset($data['hidden']) ? $data['hidden'] : false;
+            // $temp['status']    = isset($data['status']) ? $data['status'] : true;
+            // $temp['component'] = isset($data['component']) && !empty($data['component']) ? $data['component'] : $data['isview'] ? $data['node'] : '';
+            // $temp['redirect']  = isset($data['redirect']) ? $data['redirect'] : '';
+            // $temp['icon']      = isset($data['icon']) ? $data['icon'] : '';
+            // $temp['no_cache']  = isset($data['no_cache']) ? (boolean) $data['no_cache'] : false;
+
+            if (isset($temp['id'])) {
+                $model = $this->model->find($temp['id']);
+                $model->where(['id' => $temp['id']])->save($temp);
             } else {
                 $model = new $this->model;
                 $model->save($temp);

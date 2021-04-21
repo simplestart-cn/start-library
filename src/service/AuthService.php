@@ -74,9 +74,9 @@ class AuthService extends Service
      * 获取登录账户
      * @return [type] [description]
      */
-    public function getUser()
+    public function getUser($force = true)
     {
-        if(!$this->user){
+        if($force && !$this->user){
             throw_error(lang('not_login'), '', -1);
         }
         return $this->user;
@@ -88,13 +88,10 @@ class AuthService extends Service
      */
     public function getUserId($force = true)
     {
-        if ($this->user) {
-            return $this->user['id'];
-        }
-        if($force){
+        if($force && !$this->user){
             throw_error(lang('not_login'), '', -1);
         }
-        return 0;
+        return $this->user ? $this->user['id'] : 0;
     }
 
     /**
@@ -103,13 +100,10 @@ class AuthService extends Service
      */
     public function getUserName($force = true)
     {
-        if ($this->user) {
-            return $this->user['name'];
+        if($force && !$this->user){
+            throw_error(lang('not_login'), '', -1);
         }
-        if($force){
-            tthrow_error(lang('not_login'), '', -1);
-        }
-        return '';
+        return $this->user ? $this->user['name'] : '';
     }
 
     /**
@@ -123,7 +117,7 @@ class AuthService extends Service
             if (isset($input['nodes']) && !empty($input['nodes'])) {
                 foreach ($input['nodes'] as $value) {
                     $nodes[] = [
-                        'auth' => $model->id,
+                        'auth' => $model->name,
                         'node' => $value['node'],
                         'half' => isset($value['half']) ? $value['half'] : 0,
                     ];
@@ -150,13 +144,13 @@ class AuthService extends Service
             if (isset($input['nodes']) && !empty($input['nodes'])) {
                 foreach ($input['nodes'] as $value) {
                     $nodes[] = [
-                        'auth' => $model->id,
+                        'auth' => $model->name,
                         'node' => $value['node'],
                         'half' => isset($value['half']) ? $value['half'] : 0,
                     ];
                 }
             }
-            NodeService::instance()->model()->where(['auth' => $model->id])->delete();
+            NodeService::instance()->model()->where(['auth' => $model->name])->delete();
             NodeService::instance()->model()->insertAll($nodes);
             return $model;
         }
@@ -194,6 +188,7 @@ class AuthService extends Service
         $auths = array();
         foreach ($tree as $value) {
             $auths[] = [
+                'name' => $value['name'],
                 'title' => $value['title'],
                 'nodes' => self::combineNodes($value),
             ];
@@ -240,7 +235,7 @@ class AuthService extends Service
         $model = self::model();
         return $model->info($filter, ['nodes']);
     }
-
+    
     /**
      * 获取授权节点
      * @param  array  $auths [description]
@@ -248,11 +243,14 @@ class AuthService extends Service
      */
     public static function getNodes($auths = [])
     {
-        $model = self::model();
+        $self = self::instance();
+        if($self->isOwner()){
+            return $self->model->nodes()->column('node');
+        }
         if (is_string($auths) && strstr($auths, ',') !== false) {
             $auths = explode(',', $auths);
         }
-        return $model->nodes()->where('auth', 'in', $auths)->column('node');
+        return $self->model->nodes()->where('auth', 'in', $auths)->column('node');
     }
 
     /**

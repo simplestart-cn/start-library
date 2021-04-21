@@ -196,7 +196,7 @@ class AppService extends Service
         self::startTrans();
         try {
             // 删除权限菜单
-            MenuService::model()->where(['app' => $name])->save(['status' => 0]);
+            MenuService::model()->where(['app' => $name])->delete();
             // 删除全局配置
             ConfigService::model()->where(['app' => $name])->delete();
             // 删除应用记录
@@ -324,7 +324,7 @@ class AppService extends Service
     {
         $path         = self::instance()->app->getBasePath() . $name . DIRECTORY_SEPARATOR . 'app.json';
         if(!is_file($path)){
-            throw_error(lang('app_does_not_exist'));
+            return false;
         }
         $info         = json_decode(file_get_contents($path), true);
         $info['name'] = strtolower($name);

@@ -49,9 +49,9 @@ if (!function_exists('get_user')) {
      * @return boolean
      * @throws ReflectionException
      */
-    function get_user()
+    function get_user($force = true)
     {
-        return AuthService::instance()->getUser();
+        return AuthService::instance()->getUser($force);
     }
 }
 if (!function_exists('get_user_id')) {
@@ -61,9 +61,9 @@ if (!function_exists('get_user_id')) {
      * @return boolean
      * @throws ReflectionException
      */
-    function get_user_id()
+    function get_user_id($force = true)
     {
-        return AuthService::instance()->getUserId();
+        return AuthService::instance()->getUserId($force);
     }
 }
 if (!function_exists('get_user_name')) {
@@ -73,9 +73,9 @@ if (!function_exists('get_user_name')) {
      * @return boolean
      * @throws ReflectionException
      */
-    function get_user_name()
+    function get_user_name($force = true)
     {
-        return AuthService::instance()->getUserName();
+        return AuthService::instance()->getUserName($force);
     }
 }
 if (!function_exists('auth')) {

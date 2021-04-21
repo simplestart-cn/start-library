@@ -185,7 +185,7 @@ abstract class Controller extends \stdClass
      * @param string $strict 严格模式 ( 过滤未验证参数 )
      * @return array
      */
-    protected function formValidate(array $rules=[], $type = '', $strict = false)
+    protected function formValidate(array $rules=[], $type = '', $strict = true)
     {
         if($type !== ''){
             if(strtolower($this->app->request->method()) !== strtolower(str_replace('.', '', $type))){
