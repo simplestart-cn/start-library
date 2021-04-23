@@ -74,25 +74,25 @@ class NodeService extends Service
      */
     public function getAll($app = '', $force = false)
     {
-        list($nodes, $pnodes, $methods) = [[], [], array_reverse($this->getMethods($app, $force))];
+        list($nodes, $parents, $methods) = [[], [], array_reverse($this->getMethods($app, $force))];
         foreach ($methods as $node => $method) {
-            list($count, $pnode) = [substr_count($node, '/'), substr($node, 0, strripos($node, '/'))];
+            list($count, $parent) = [substr_count($node, '/'), substr($node, 0, strripos($node, '/'))];
             if ($count === 2 && (!empty($method['isauth']) || !empty($method['ismenu']))) {
-                in_array($pnode, $pnodes) or array_push($pnodes, $pnode);
+                in_array($parent, $parents) or array_push($parents, $parent);
                 $nodes[$node] = [
                     'node' => $node,
                     'title' => $method['title'],
-                    'pnode' => $pnode,
+                    'parent' => $parent,
                     'isauth' => $method['isauth'],
                     'ismenu' => $method['ismenu'],
                     'isview' => $method['isview'],
                     'islogin' => $method['islogin']
                 ];
-            } elseif ($count === 1 && in_array($pnode, $pnodes)) {
+            } elseif ($count === 1 && in_array($parent, $parents)) {
                 $nodes[$node] = [
                     'node' => $node,
                     'title' => $method['title'],
-                    'pnode' => $pnode,
+                    'parent' => $parent,
                     'isauth' => $method['isauth'],
                     'ismenu' => $method['ismenu'],
                     'isview' => $method['isview'],
@@ -101,22 +101,22 @@ class NodeService extends Service
             }
         }
         foreach (array_keys($nodes) as $key) foreach ($methods as $node => $method) if (stripos($key, "{$node}/") !== false) {
-            $pnode = substr($node, 0, strripos($node, '/'));
+            $parent = substr($node, 0, strripos($node, '/'));
             $nodes[$node] = [
                 'node' => $node,
                 'title' => $method['title'],
-                'pnode' => $pnode,
+                'parent' => $parent,
                 'isauth' => $method['isauth'],
                 'ismenu' => $method['ismenu'],
                 'isview' => $method['isview'],
                 'islogin' => $method['islogin']
             ];
-            $nodes[$pnode] = [
-                'node' => $pnode,
-                'title' => ucfirst($pnode),
-                'pnode' => '',
+            $nodes[$parent] = [
+                'node' => $parent,
+                'title' => ucfirst($parent),
+                'parent' => '',
                 'isauth' => $method['isauth'],
-                'ismenu' => $method['ismenu'],
+                'ismenu' => (boolean)$method['ismenu'],
                 'isview' => $method['isview'],
                 'islogin' => $method['islogin']
             ];
@@ -131,7 +131,7 @@ class NodeService extends Service
     public function getTree($force = flase)
     {
         $nodes = $this->getAll($force);
-        return DataExtend::arr2tree($nodes, 'node', 'pnode', 'child');
+        return DataExtend::arr2tree($nodes, 'node', 'parent', 'child');
     }
 
     /**

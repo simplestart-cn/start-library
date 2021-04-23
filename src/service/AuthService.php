@@ -107,6 +107,42 @@ class AuthService extends Service
     }
 
     /**
+     * 获取可选权限
+     * @param  array  $filter  [description]
+     * @param  array  $order   [description]
+     * @return [type]          [description]
+     */
+    public static function getList($filter = [], $order = ['sort desc', 'id asc'])
+    {
+        $self = self::instance();
+        if ($self->isOwner()) {
+            return $self->model->list($filter, $order);
+        } else {
+            $user = get_user();
+            $filter['name'] = ['in', $user['authorize']];
+            return $self->model->list($filter, $order);
+        }
+    }
+
+    /**
+     * 获取可选权限(分页)
+     * @param  array  $filter  [description]
+     * @param  array  $order   [description]
+     * @return [type]          [description]
+     */
+    public static function getPage($filter = [], $order = ['sort desc', 'id asc'])
+    {
+        $self = self::instance();
+        if ($self->isOwner()) {
+            return $self->model->page($filter, $order);
+        } else {
+            $user = get_user();
+            $filter['name'] = ['in', $user['authorize']];
+            return  $self->model->page($filter, $order);
+        }
+    }
+
+    /**
      * 添加角色权限
      */
     public static function create($input)
@@ -181,27 +217,21 @@ class AuthService extends Service
      * 重置权限组
      * @return [type] [description]
      */
-    public static function reset()
+    public static function restore()
     {
-        $list  = MenuService::model()->list(['status' => 1]);
-        $tree  = DataExtend::arr2tree($list->toArray());
-        $auths = array();
-        foreach ($tree as $value) {
-            $auths[] = [
-                'name' => $value['name'],
-                'title' => $value['title'],
-                'nodes' => self::combineNodes($value),
-            ];
+        $user = get_user();
+        if(!$user['is_owner']){
+            throw_error(lang('not_auth'));
         }
+        $tree  = DataExtend::arr2tree(MenuService::model()->list(['status' => 1])->toArray());
+        $auth = self::combineAuth($tree);
         self::startTrans();
         try {
             // 清理数据
             AuthService::model()->where('id', '>', 0)->delete(true);
             NodeService::model()->where('id', '>', 0)->delete(true);
-            // 插入数据
-            foreach ($auths as $auth) {
-                self::create($auth);
-            }
+            // 更新数据
+            self::saveBuilding($auth);
             self::startCommit();
             return true;
         } catch (\HttpResponseException $e) {
@@ -211,6 +241,49 @@ class AuthService extends Service
         }
     }
 
+    /**
+     * 更新权限信息
+     * @param  [type] $auth [description]
+     * @return [type]        [description]
+     */
+    private static function saveBuilding($auth = [], $pid = 0)
+    {
+        foreach ($auth as $data) {
+            $data['pid']       = $pid;
+            $model = self::create($data);
+            if($model && !empty($data['children'])){
+                self::saveBuilding($data['children'], $model->id);
+            }
+        }
+        return true;
+    }
+
+    /**
+     * 构建权限
+     * @param  [type] $item [description]
+     * @return [type]       [description]
+     */
+    private static function combineAuth($tree)
+    {
+        $auth = array();
+        foreach ($tree as $item) {
+            if(!empty($item['children'])){
+                $auth[] = [
+                'name' => $item['name'],
+                'title' => $item['title'],
+                'nodes' => self::combineNodes($item),
+                'children' => self::combineAuth($item['children'])
+                ];
+            }
+        }
+        return $auth;
+    }
+
+    /**
+     * 构建权限节点
+     * @param  [type] $item [description]
+     * @return [type]       [description]
+     */
     private static function combineNodes($item)
     {
         $nodes = array();
@@ -223,6 +296,21 @@ class AuthService extends Service
             }
         }
         return $nodes;
+    }
+
+    /**
+     * 获取授权节点树
+     * @param array $checkeds
+     * @return array
+     * @throws \ReflectionException
+     */
+    public function getTree($checkeds = [])
+    {
+        $nodes = NodeService::instance()->getAll();
+        foreach ($nodes as $item) {
+            $item['checked'] = in_array($item['node'], $checkeds);
+        }
+        return DataExtend::arr2tree(array_reverse($nodes), 'node', 'parent', 'child');
     }
 
     /**
@@ -251,21 +339,6 @@ class AuthService extends Service
             $auths = explode(',', $auths);
         }
         return $self->model->nodes()->where('auth', 'in', $auths)->column('node');
-    }
-
-    /**
-     * 获取授权节点树
-     * @param array $checkeds
-     * @return array
-     * @throws \ReflectionException
-     */
-    public function getTree($checkeds = [])
-    {
-        $nodes = NodeService::instance()->getAll();
-        foreach ($nodes as $item) {
-            $item['checked'] = in_array($item['node'], $checkeds);
-        }
-        return DataExtend::arr2tree(array_reverse($nodes), 'node', 'pnode', 'child');
     }
 
     /**

@@ -13,6 +13,6 @@ class Auth extends Model
 
 	public function nodes()
 	{
-		return $this->hasMany("Node",'auth','id')->field(['auth','node','half']);
+		return $this->hasMany("Node",'auth','name')->field(['auth','node','half']);
 	}
 }

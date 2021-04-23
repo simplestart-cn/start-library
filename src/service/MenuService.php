@@ -220,10 +220,11 @@ class MenuService extends Service
         $dbNodes  = $this->model->select()->toArray();
         $nodeIds  = array_column($dbNodes, 'id');
         $nodeKeys = array_column($dbNodes, 'node');
-        $nodeList = array();
+        $menuList = array();
         foreach ($nodes as &$item) {
             // 格式化
-            $temp['app']    = $app;
+            $temp           = array();
+            $temp['app']    = empty($item['app']) ? $app : $item['app'];
             $temp['name']   = str_replace('/', '_', $item['node']);
             $temp['icon']   = $item['ismenu']['icon'] ?? '';
             $temp['sort']   = $item['ismenu']['sort'] ?? 100;
@@ -231,10 +232,10 @@ class MenuService extends Service
             $temp['status'] = $item['ismenu']['status'] ?? true;
             $temp['params'] = $item['ismenu']['params'] ?? '';
             $temp['node']   = $item['node'];
-            $temp['pnode']  = $item['ismenu']['pnode'] ?? $item['pnode'];
+            $temp['parent']  = $item['ismenu']['parent'] ?? $item['parent'];
             $temp['path']      = '/' . $item['node'];
             $temp['is_menu']   = (boolean)$item['ismenu'];
-            $temp['component'] = isset($item['isview']) ? $item['node'] : '';
+            $temp['component'] = (boolean)$item['isview'] ? $item['node'] : '';
             $temp['redirect']  = '';
             $temp['hidden']    = false;
             $temp['no_cache']  = false;
@@ -254,31 +255,45 @@ class MenuService extends Service
                     $temp['condition'] = $last['condition'];
                 }
                 // 尝试寻找上级
-                if (!empty($temp['pnode'])) {
-                    $pkey = array_search($temp['pnode'], $nodeKeys);
+                if (!empty($temp['parent'])) {
+                    $pkey = array_search($temp['parent'], $nodeKeys);
                     if ($pkey > -1) {
                         $parent        = $dbNodes[$pkey];
                         $temp['pid']   = $parent['id'];
-                        $temp['pnode'] = $parent['node'];
+                        $temp['parent'] = $parent['node'];
                         // 引入上级
                         if (!in_array($parent['node'], array_column($nodes, 'node'))) {
                             $ppkey            = array_search($parent['pid'], $nodeIds);
-                            $parent['pnode']  = $ppkey > -1 ? $dbNodes[$ppkey]['node'] : '';
+                            $parent['parent']  = $ppkey > -1 ? $dbNodes[$ppkey]['node'] : '';
                             $parent['ismenu'] = $ppkey > -1 ? $dbNodes[$ppkey]['is_menu'] : false;
+                            $parent['isview'] = $ppkey > -1 ? empty($dbNodes[$ppkey]['component']) : false;
                             array_push($nodes, $parent);
-                            array_push($nodeList, $parent);
+                            array_push($menuList, $parent);
                         }
                     }
                 }
             }
-            array_push($nodeList, $temp);
+            array_push($menuList, $temp);
         }
-        // 设置app信息
-        $tree = DataExtend::arr2tree($nodeList, 'node', 'pnode', 'children');
-        if (count($tree) && $app = AppService::getPackInfo($app)) {
-            $tree[0]['icon']  = $app['icon'] ?? '';
-            $tree[0]['title'] = $app['title'] ?? $app['name'];
+        // 注解菜单
+        $menuList = array_combine(array_column($menuList,'node'), array_values($menuList));
+        // 数据菜单
+        $lastList = array_combine(array_column($dbNodes,'node'), array_values($dbNodes));
+
+        // 拓展菜单
+        $appInfo = AppService::getPackInfo($app);
+        if ($appInfo) {
+            $menuList[$app]['icon']  = $appInfo['icon'] ?? '';
+            $menuList[$app]['title'] = $appInfo['title'] ?? $appInfo['name'];
+            if(isset($appInfo['menu'])){
+                foreach ($appInfo['menu'] as &$extend) { $extend['app'] = $app; }
+                $menuExtend = array_combine(array_column($appInfo['menu'],'node'), array_values($appInfo['menu']));
+                $menuList = array_merge($menuList, $menuExtend);
+            }
         }
+        // 保存菜单
+        $tree = DataExtend::arr2tree($menuList, 'node', 'parent', 'children');
+        print_r($tree);die;
         $menus = $this->saveBuilding($tree, 0);
         return $menus;
     }
@@ -292,25 +307,13 @@ class MenuService extends Service
     {
         $menus = array();
         foreach ($nodes as $key => &$data) {
+            if($pid === 0 && empty($data['children'])){
+                continue;
+            }
             $temp              = $data;
             $temp['pid']       = $pid;
-            unset($temp['pnode']);
+            unset($temp['parent']);
             unset($temp['children']);
-
-            // $temp['app']       = $data['app'];
-            // $temp['title']     = $data['title'];
-            // $temp['name']      = str_replace('/', '_', $data['node']);
-            // $temp['node']      = $data['node'];
-            // $temp['path']      = '/' . $data['node'];
-            // $temp['is_menu']   = (boolean) $data['ismenu'];
-            // $temp['sort']      = isset($data['sort']) ? $data['sort'] : 100;
-            // $temp['hidden']    = isset($data['hidden']) ? $data['hidden'] : false;
-            // $temp['status']    = isset($data['status']) ? $data['status'] : true;
-            // $temp['component'] = isset($data['component']) && !empty($data['component']) ? $data['component'] : $data['isview'] ? $data['node'] : '';
-            // $temp['redirect']  = isset($data['redirect']) ? $data['redirect'] : '';
-            // $temp['icon']      = isset($data['icon']) ? $data['icon'] : '';
-            // $temp['no_cache']  = isset($data['no_cache']) ? (boolean) $data['no_cache'] : false;
-
             if (isset($temp['id'])) {
                 $model = $this->model->find($temp['id']);
                 $model->where(['id' => $temp['id']])->save($temp);
