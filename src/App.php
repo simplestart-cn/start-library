@@ -77,8 +77,11 @@ class App
      * @access protected
      * @return string
      */
-    protected function getRoutePath(): string
+    protected function getRoutePath($appName = ''): string
     {
+        if($appName === 'core'){
+            return $this->app->getRootPath() . 'core' . DIRECTORY_SEPARATOR . 'route' . DIRECTORY_SEPARATOR;
+        }
         return $this->app->getAppPath() . 'route' . DIRECTORY_SEPARATOR;
     }
 
@@ -209,7 +212,7 @@ class App
         }
         if (is_dir($appPath)) {
             $this->app->setRuntimePath($this->app->getRuntimePath() . $appName . DIRECTORY_SEPARATOR);
-            $this->app->http->setRoutePath($this->getRoutePath());
+            $this->app->http->setRoutePath($this->getRoutePath($appName));
             //加载应用
             $this->loadApp($appName, $appPath);
         }
@@ -240,10 +243,6 @@ class App
 
         if (is_file($appPath . 'middleware.php')) {
             $this->app->middleware->import(include $appPath . 'middleware.php', 'app');
-        }
-        
-        if (is_file($this->app->getRootPath() . 'core' . DIRECTORY_SEPARATOR . 'provider.php')) {
-            $this->app->bind(include $this->app->getRootPath() . 'core' . DIRECTORY_SEPARATOR  . 'provider.php');
         }
 
         // 加载应用默认语言包

@@ -353,7 +353,6 @@ class AuthService extends Service
         if ($this->isOwner()) {
             return true;
         }
-
         $service            = NodeService::instance();
         list($real, $nodes) = [$service->fullnode($node), $service->getMethods()];
         foreach ($nodes as $key => $rule) {

@@ -74,8 +74,18 @@ class MenuService extends Service
         } else {
             $filter['app'] = $app;
         }
-        $data = self::getList($filter);
-        $data = DataExtend::arr2tree($data->toArray());
+        $data = self::getList($filter)->toArray();
+        // 补充上级菜单
+        $ids = array_column($data, 'id');
+        foreach ($data as $item) {
+            if($item['pid'] && !in_array($item['pid'], $ids)){
+                if($parent = self::model()->find($item['pid'])->toArray()){
+                    array_push($ids, $parent['id']);
+                    array_push($data, $parent);
+                }
+            }
+        }
+        $data = DataExtend::arr2tree($data);
         return $self->formatData($data);
     }
 

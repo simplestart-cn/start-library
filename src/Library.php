@@ -53,6 +53,11 @@ class Library extends Service
             'think\route\Url' => Url::class,
         ]);
 
+        // 服务提供
+        if (is_file($this->app->getRootPath() . 'core' . DIRECTORY_SEPARATOR . 'provider.php')) {
+            $this->app->bind(include $this->app->getRootPath() . 'core' . DIRECTORY_SEPARATOR . 'provider.php');
+        }
+
     }
 
     /**
