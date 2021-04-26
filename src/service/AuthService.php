@@ -112,7 +112,7 @@ class AuthService extends Service
      * @param  array  $order   [description]
      * @return [type]          [description]
      */
-    public static function getList($filter = [], $order = ['sort desc', 'id asc'])
+    public static function getList($filter = [], $order = ['sort asc', 'id asc'])
     {
         $self = self::instance();
         if ($self->isOwner()) {
@@ -130,7 +130,7 @@ class AuthService extends Service
      * @param  array  $order   [description]
      * @return [type]          [description]
      */
-    public static function getPage($filter = [], $order = ['sort desc', 'id asc'])
+    public static function getPage($filter = [], $order = ['sort asc', 'id asc'])
     {
         $self = self::instance();
         if ($self->isOwner()) {
@@ -269,8 +269,9 @@ class AuthService extends Service
         foreach ($tree as $item) {
             if(!empty($item['children'])){
                 $auth[] = [
-                'name' => $item['name'],
+                'name'  => $item['name'],
                 'title' => $item['title'],
+                'sort'  => $item['sort'],
                 'nodes' => self::combineNodes($item),
                 'children' => self::combineAuth($item['children'])
                 ];

@@ -46,6 +46,12 @@ class Model extends \think\Model
      */
     protected $order = [];
 
+    // 模型初始化
+    protected static function init()
+    {
+        self::instance()->initialize();
+    }
+    
     /**
      * 初始化服务
      * @return $this

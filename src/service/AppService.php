@@ -322,7 +322,11 @@ class AppService extends Service
      */
     public static function getPackInfo($name)
     {
-        $path         = self::instance()->app->getBasePath() . $name . DIRECTORY_SEPARATOR . 'app.json';
+        if($name === 'core'){
+            $path         = self::instance()->app->getRootPath() . $name . DIRECTORY_SEPARATOR . 'app.json';
+        }else{
+            $path         = self::instance()->app->getBasePath() . $name . DIRECTORY_SEPARATOR . 'app.json';
+        }
         if(!is_file($path)){
             return false;
         }

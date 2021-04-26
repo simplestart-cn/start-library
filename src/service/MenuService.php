@@ -33,7 +33,7 @@ class MenuService extends Service
      * @param  [type] $calback [description]
      * @return [type]          [description]
      */
-    public static function getList($filter = [], $order = ['sort desc', 'id asc'])
+    public static function getList($filter = [], $order = ['sort asc', 'id asc'])
     {
         $self = self::instance();
         if (AuthService::instance()->isOwner()) {
@@ -264,6 +264,9 @@ class MenuService extends Service
         $dbNodes   = array_combine(array_column($dbNodes, 'node'), array_values($dbNodes));
         $dbKeys  = array_combine(array_column($dbNodes, 'id'), array_values($dbNodes));
         foreach ($nodeMenu as &$menu) {
+            if(isset($dbNodes[$menu['node']])){
+                $menu['id'] = $dbNodes[$menu['node']]['id'];
+            }
             if(!empty($menu['parent']) && isset($dbNodes[$menu['parent']])){
                 $parent         = $dbNodes[$menu['parent']];
                 $menu['pid']    = $parent['id'];
@@ -282,10 +285,6 @@ class MenuService extends Service
         $tree = DataExtend::arr2tree($nodeMenu, 'node', 'parent', 'children');
         $menus = $this->saveBuilding($tree, 0);
         return $menus;
-    }
-    private static function combineMenu($item, $parent)
-    {
-
     }
 
     /**
