@@ -79,9 +79,9 @@ class MenuService extends Service
         $ids = array_column($data, 'id');
         foreach ($data as $item) {
             if($item['pid'] && !in_array($item['pid'], $ids)){
-                if($parent = self::model()->find($item['pid'])->toArray()){
-                    array_push($ids, $parent['id']);
-                    array_push($data, $parent);
+                if($parent = self::model()->find($item['pid'])){
+                    array_push($ids, $parent->id);
+                    array_push($data, $parent->toArray());
                 }
             }
         }
@@ -101,7 +101,7 @@ class MenuService extends Service
             $temp              = [];
             $temp['name']      = $data['name'];
             $temp['path']      = $data['path'];
-            $temp['component'] = $data['component'] ?: 'layout';
+            $temp['template'] = $data['template'] ?: 'layout';
             $temp['node']      = $data['node'];
             if ($data['hidden'] > -1) {
                 $temp['hidden'] = (boolean) $data['hidden'];
@@ -240,10 +240,10 @@ class MenuService extends Service
             $temp['params']    = $item['ismenu']['params'] ?? '';
             $temp['node']      = $item['node'];
             $temp['parent']    = $item['ismenu']['parent'] ?? $item['parent'];
-            $temp['path']      = '/' . $item['node'];
-            $temp['is_menu']   = (boolean) $item['ismenu'];
-            $temp['component'] = (boolean) $item['isview'] ? $item['node'] : '';
-            $temp['redirect']  = '';
+            $temp['path']      = '/' . str_replace('_', '/', $item['node']);
+            $temp['is_menu']   = isset($item['ismenu']['is_menu']) ? (boolean)$item['ismenu']['is_menu']: (boolean) $item['ismenu'];
+            $temp['template']  = isset($item['ismenu']['template']) ? $item['ismenu']['template'] : ((boolean) $item['isview'] ? str_replace('_', '/', $item['node']) : '');
+            $temp['redirect']  = $item['ismenu']['redirect'] ?? '';
             $temp['hidden']    = false;
             $temp['no_cache']  = false;
             $nodeMenu[$item['node']] = $temp;

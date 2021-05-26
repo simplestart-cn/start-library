@@ -82,6 +82,9 @@ class AppService extends Service
         $installed  = self::getInstalled();
         $downloaded = self::getDownloaded();
         foreach ($downloaded as $name => $app) {
+            if(!isset($app['version'])){
+                throw_error('app.json error: '.$app['name']);
+            }
             if (isset($installed[$name])) {
                 $last              = $installed[$name];
                 $last['installed'] = 1;
@@ -162,12 +165,12 @@ class AppService extends Service
             //
             //
             //
-            // 添加全局配置
+            // 添加默认配置
             if (isset($app['config']) && count($app['config'])) {
                 $config = $app['config'];
                 foreach ($config as &$conf) {
-                    $conf['app']       = $app['name'];
-                    $conf['app_title'] = $app['title'];
+                    $conf['app']       = strtolower($conf['app'] ?? $app['name']);
+                    $conf['app_title'] = strtolower($conf['app_title'] ?? $app['title']);
                 }
                 ConfigService::model()->saveAll($config);
             }
@@ -193,11 +196,21 @@ class AppService extends Service
         if (!$model) {
             throw_error(lang('app_does_not_exist'));
         }
+        $app = self::getPackInfo($name);
         self::startTrans();
         try {
             // 删除权限菜单
             MenuService::model()->where(['app' => $name])->delete();
-            // 删除全局配置
+            // 删除默认配置
+            if (isset($app['config']) && count($app['config'])) {
+                $config = $app['config'];
+                foreach ($config as &$conf) {
+                    $where['app']       = strtolower($conf['app'] ?? $app['name']);
+                    $where['field']     = $conf['field'];
+                    ConfigService::model()->where($where)->delete();
+                }
+            }
+            // 删除动态配置
             ConfigService::model()->where(['app' => $name])->delete();
             // 删除应用记录
             $model->remove();

@@ -180,21 +180,21 @@ abstract class Controller extends \stdClass
 
     /**
      * 快捷输入并验证（ 支持 规则 # 别名 ）
-     * @param array $rules   验证规则（ 验证信息数组 ）
-     * @param string $type   输入方式 ( post. 或 get. )
-     * @param string $strict 严格模式 ( 过滤未验证参数 )
+     * @param array  $rules   验证规则（ 验证信息数组 ）
+     * @param string $strict  严格模式  ( 过滤未验证参数 )
+     * @param string $type    输入方式  ( post. 或 get. )
      * @return array
      */
-    protected function formValidate(array $rules=[], $type = '', $strict = true)
+    protected function formValidate(array $rules=[], $strict = false, $type = '')
     {
         if($type !== ''){
             if(strtolower($this->app->request->method()) !== strtolower(str_replace('.', '', $type))){
                 throw_error(lang("method_limit", [strtoupper($type)]));
             }
         }
-        return ValidateHelper::instance()->init($rules, $type, $strict);
+        return ValidateHelper::instance()->init($rules, $strict, $type);
     }
-
+    
     /**
      * 检查表单令牌验证
      * @param boolean $return 是否返回结果

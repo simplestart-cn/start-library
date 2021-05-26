@@ -87,7 +87,7 @@ class ValidateHelper extends Helper
      *  'fileExt'     => 'extensions to upload is not allowed',
      *  'fileMime'    => 'mimetype to upload is not allowed',
      */
-    public function init(array $rules, $type = '', $strict = true)
+    public function init(array $rules, $strict = true, $type = '')
     {
         if($type !== '' && stripos($type, '.') === false){
             $type .= '.'; 

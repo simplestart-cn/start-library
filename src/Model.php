@@ -15,6 +15,7 @@ namespace start;
 use think\App;
 use think\Container;
 use think\Request;
+use think\facade\Cache;
 
 /**
  * 自定义模型基类
@@ -44,7 +45,7 @@ class Model extends \think\Model
     /**
      * 排序
      */
-    protected $order = [];
+    protected $order = ['create_time desc'];
 
     // 模型初始化
     protected static function init()
@@ -157,6 +158,9 @@ class Model extends \think\Model
      *     'key4' => ['in', [1,2,3]],
      *     'with.key1' => [1,2,3],
      *     'with.key2' => ['like', "%$string%"]
+     *     'key1|key2' => value,
+     *     'with1.key1|with2.key2' => value,
+     *     'with1.key1|key2' => 
      * ];
      */
     public function filter($input = [])
@@ -212,11 +216,20 @@ class Model extends \think\Model
      */
     private function parseFilter($query, array $condition = [], $table = '')
     {
+        $_table = $query->getTable();
+        $_tableFields = Cache::get($_table);
+        if(empty($_tableFields)){
+            $_tableFields = $query->getTableFields();
+            Cache::set($_table, $_tableFields);
+        }
         $operator = ['=', '<>', '>', '>=', '<', '<=', 'like', 'not like', 'in', 'not in', 'between', 'not between', 'null', 'not null', 'exists', 'not exists', 'regexp', 'not regexp'];
         if (!empty($table) && stripos($table, '.') === false) {
             $table .= '.';
         }
         foreach ($condition as $key => $value) {
+            if(!in_array($key, $_tableFields)){
+                if(stripos($key, '|') === false) continue;
+            }
             if (empty($value) && !is_numeric($value)) {
                 continue;
             }

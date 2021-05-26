@@ -69,7 +69,7 @@ class CodeExtend
     }
 
     /**
-     * 唯一字符编码(临时)
+     * 唯一字符编码
      * @param  integer $size   [description]
      * @param  string  $prefix [description]
      * @return [type]          [description]

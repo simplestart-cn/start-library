@@ -62,21 +62,57 @@ class ConfigService extends Service
      */
     public function get($name)
     {
-        $config = Cache::get('core_config') ?: [];
-        if (!count($config)) {
-            foreach (self::model()->select() as $vo) {
+        list($app, $field) = $this->parse($name);
+        $config = Cache::get($app.'_config') ?: [];
+        if (!count($config) || env('DEBUG')) {
+            foreach (self::model()->where(compact('app'))->select() as $vo) {
                 $config[$vo['app']][$vo['field']] = $vo['value'];
             }
-            Cache::set('core_config', $config);
+            Cache::set($app.'_config', $config);
         }
-        if (empty($name)) {
-            return $config;
-        }
-        list($app, $field) = $this->parse($name);
         if ($field === 'all') {
             return isset($config[$app]) ? $config[$app] : [];
         }
         return isset($config[$app][$field]) ? $config[$app][$field] : null;
+    }
+
+    /**
+     * 批量更新
+     * @param  [type] $data [description]
+     * @return [type]       [description]
+     */
+    public static function updateList($data)
+    {
+        $apps = array_column($data, 'app');
+        foreach ($apps as $app) {
+            Cache::delete($app.'_config');
+        }
+        return self::model()->saveAll($data);
+    }
+
+    public static function getAppConfig($app = '')
+    {
+        if (empty($app)) {
+            $apps          = array_merge(AppService::getActive(), ['core']);
+            $filter['app'] = ['in', $apps];
+        } else {
+            $filter['app'] = $app;
+        }
+        $filter['is_protected'] = 0;
+        $data = array();
+        $list = self::getList($filter);
+        foreach ($list as $item) {
+            if($item['is_protected']){
+                continue;
+            }
+            if(isset($data[$item['app']])){
+                $data[$item['app']][$item['field']] = $item['value'] ?: $item['default'];
+            }else{
+                $data[$item['app']] = [];
+                $data[$item['app']][$item['field']] = $item['value'] ?: $item['default'];
+            }
+        }
+        return $data;
     }
 
     /**
@@ -89,6 +125,8 @@ class ConfigService extends Service
     {
         if (stripos($name, '.') !== false) {
             [$app, $field] = explode('.', $name);
+        }else{
+            $app = $name;
         }
         $field = isset($field) && !empty($field) ? $field : 'all';
         return [strtolower($app), strtolower($field)];

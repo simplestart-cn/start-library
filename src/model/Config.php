@@ -13,41 +13,58 @@ class Config extends Model
 
 	public function setPropsAttr($value)
 	{
+		if(empty($value)) return '{}';
 		return json_encode($value);
 	}
 
 	public function getPropsAttr($value)
 	{
-		return json_decode($value);
+		if(empty($value)) return [];
+		return $this->formatProps(json_decode($value, true));
 	}
 
 	public function setOptionsAttr($value)
 	{
+		if(empty($value)) return '[]';
 		return json_encode($value);
 	}
 
 	public function getOptionsAttr($value)
 	{
-		return json_decode($value);
+		if(empty($value)) return [];
+		return $this->formatProps(json_decode($value, true));
 	}
 
 	public function setValidateAttr($value)
 	{
+		if(empty($value)) return '[]';
 		return json_encode($value);
 	}
 
 	public function getValidateAttr($value)
 	{
+		if(empty($value)) return [];
 		return json_decode($value);
 	}
 
+	public function setSuffixAttr($value)
+	{
+		if(empty($value)) return '{}';
+		return json_encode($value);
+	}
+
+	public function getSuffixAttr($value)
+	{
+		if(empty($value)) return [];
+		return $this->formatProps(json_decode($value, true));
+	}
+	
 	public function setIsLockingAttr($value)
 	{
-		if($value === true || $value === 'true'){
+		if($value || $value === 'true' ){
 			return 1;
-		}else{
-			return 0;
 		}
+		return 0;
 	}
 
 	public function getIsLockingAttr($value)
@@ -55,14 +72,78 @@ class Config extends Model
 		return boolval($value);
 	}
 
+	public function setValueAttr($value)
+	{
+		return $this->valueEncode($value);
+	}
 
 	public function getValueAttr($value, $data)
 	{
 		if(empty($value)){
 			$value = $data['default'];
 		}
-		if($value === 'true' || $value === 'false'){
-			return boolval($value);
+		return $this->valueDecode($value);
+	}
+
+	public function setDefaultAttr($value)
+	{
+		return $this->valueEncode($value);
+	}
+
+	public function getDefaultAttr($value, $data)
+	{
+		if(empty($value)){
+			$value = $data['default'];
+		}
+		return $this->valueDecode($value);
+	}
+
+	/**
+	 * 格式话属性
+	 * @param  [type] $data [description]
+	 * @return [type]       [description]
+	 */
+	private function formatProps($data)
+	{
+
+		if(!is_array($data)) return [];
+		foreach ($data as $key => $value) {
+			if(is_array($value)){
+				$data[$key] = $this->formatProps($value);
+			}
+			$data[$key] = $this->valueDecode($value);
+		}
+		return $data;
+	}
+
+	/**
+	 * 格式化返回值
+	 * @param  [type] $value [description]
+	 * @return [type]        [description]
+	 */
+	private function valueDecode($value)
+	{
+		if($value === 'false' || $value === 'true'){
+			return $value === 'true';
+		}
+		if(!empty($value) && is_string($value) && preg_match("/^\d*$/",$value)){
+			return intval($value);
+		}
+		return $value;
+	}
+
+	/**
+	 * 格式化存储值
+	 * @param  [type] $value [description]
+	 * @return [type]        [description]
+	 */
+	private function valueEncode($value)
+	{
+		if($value === false || $value === true){
+			return $value ? 'true' : 'false';
+		}
+		if(is_array($value) || is_object($value)){
+			return json_encode($value);
 		}
 		return $value;
 	}
