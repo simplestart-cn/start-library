@@ -137,6 +137,10 @@ class ValidateHelper extends Helper
         }
         
         foreach ($data as $key => $value) {
+            // 过滤受保护的
+            if(in_array($key,['create_time', 'update_time'])){
+                unset($data[$key]);
+            }
             // 仅验证存在的
             if(isset($rule[$key])){
                 if(stripos($rule[$key], 'ifexist') !== false){

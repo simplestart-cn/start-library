@@ -225,6 +225,15 @@ class App
      */
     protected function loadApp(string $appName, string $appPath): void
     {
+        if($appName !== 'core'){
+            if (is_file($this->app->getRootPath() . 'core' . DIRECTORY_SEPARATOR . 'common.php')) {
+                include_once $this->app->getRootPath() . 'core' . DIRECTORY_SEPARATOR  . 'common.php';
+            }
+            if (is_file($this->app->getRootPath() . 'core' . DIRECTORY_SEPARATOR . 'middleware.php')) {
+                $this->app->middleware->import(include $this->app->getRootPath() . 'core' . DIRECTORY_SEPARATOR . 'middleware.php', 'app');
+            }
+        }
+
         if (is_file($appPath . 'common.php')) {
             include_once $appPath . 'common.php';
         }

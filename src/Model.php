@@ -170,12 +170,26 @@ class Model extends \think\Model
         }
 
         if (!is_array($input)) {
-            $this->where($input);
+            return $this->where($input);
         } else if (count($input) > 0) {
+            // 数据字段
+            $_table = $this->name ?: $this->getTable();
+            $_tableFields = Cache::get($_table.'_fields');
+            if(empty($_tableFields)){
+                $_tableFields = $this->getTableFields();
+                Cache::set($_table.'_fields', $_tableFields);
+            }
             $query    = null; // 查询对象(Query)
             $table    = ''; // 查询表格(主表格)
             $relation = array(); // 关联模型及条件
             foreach ($input as $key => $value) {
+                // 参数过滤
+                if(!in_array($key, $_tableFields)){
+                    if(stripos($key, '|') === false || stripos($key, '.') === false){
+                        unset($input[$key]);
+                    }
+                }
+                // 关联查询
                 if (stripos($key, '.') !== false) {
                     list($model, $field) = explode('.', $key);
                     if (!empty($value) || is_numeric($value)) {
@@ -185,6 +199,7 @@ class Model extends \think\Model
                     unset($input[$key]);
                 }
             }
+
             // 关联查询
             if (count($relation) > 0) {
                 $table = $this->getTable();
@@ -204,7 +219,6 @@ class Model extends \think\Model
             }
             return $query ?: $this;
         }
-        return $this;
     }
 
     /**
@@ -216,20 +230,12 @@ class Model extends \think\Model
      */
     private function parseFilter($query, array $condition = [], $table = '')
     {
-        $_table = $query->getTable();
-        $_tableFields = Cache::get($_table);
-        if(empty($_tableFields)){
-            $_tableFields = $query->getTableFields();
-            Cache::set($_table, $_tableFields);
-        }
+        
         $operator = ['=', '<>', '>', '>=', '<', '<=', 'like', 'not like', 'in', 'not in', 'between', 'not between', 'null', 'not null', 'exists', 'not exists', 'regexp', 'not regexp'];
         if (!empty($table) && stripos($table, '.') === false) {
             $table .= '.';
         }
         foreach ($condition as $key => $value) {
-            if(!in_array($key, $_tableFields)){
-                if(stripos($key, '|') === false) continue;
-            }
             if (empty($value) && !is_numeric($value)) {
                 continue;
             }
