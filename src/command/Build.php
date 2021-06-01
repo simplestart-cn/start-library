@@ -1,12 +1,13 @@
 <?php
+
 // +----------------------------------------------------------------------
-// | ThinkPHP [ WE CAN DO IT JUST THINK ]
+// | Simplestart Library
 // +----------------------------------------------------------------------
-// | Copyright (c) 2006~2015 http://thinkphp.cn All rights reserved.
+// | 版权所有: http://www.simplestart.cn copyright 2020
 // +----------------------------------------------------------------------
-// | Licensed ( http://www.apache.org/licenses/LICENSE-2.0 )
+// | 开源协议: https://www.apache.org/licenses/LICENSE-2.0.txt
 // +----------------------------------------------------------------------
-// | Author: yunwuxin <448901948@qq.com>
+// | 仓库地址: https://github.com/simplestart-cn/start-library
 // +----------------------------------------------------------------------
 
 namespace think\app\command;
@@ -29,7 +30,7 @@ class Build extends Command
      */
     protected function configure()
     {
-        $this->setName('build')
+        $this->setName('start:build')
             ->addArgument('app', Argument::OPTIONAL, 'app name .')
             ->setDescription('Build App Dirs');
     }

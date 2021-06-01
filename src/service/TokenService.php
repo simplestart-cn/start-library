@@ -31,6 +31,24 @@ class TokenService extends Service
     }
 
     /**
+     * 生成表单CSRF信息
+     * @param null|string $node
+     * @return array
+     */
+    public function buildFormToken($node = null)
+    {
+        list($token, $time) = [uniqid('csrf') . rand(1000, 9999), time()];
+        foreach ($this->app->session->all() as $key => $item) {
+            if (stripos($key, 'csrf') === 0 && isset($item['time'])) {
+                if ($item['time'] + 600 < $time) $this->clearFormToken($key);
+            }
+        }
+        $data = ['node' => NodeService::instance()->fullnode($node), 'token' => $token, 'time' => $time];
+        $this->app->session->set($token, $data);
+        return $data;
+    }
+
+    /**
      * 验证表单令牌是否有效
      * @param string $token 表单令牌
      * @param string $node 授权节点
@@ -59,21 +77,5 @@ class TokenService extends Service
         return $this;
     }
 
-    /**
-     * 生成表单CSRF信息
-     * @param null|string $node
-     * @return array
-     */
-    public function buildFormToken($node = null)
-    {
-        list($token, $time) = [uniqid('csrf') . rand(1000, 9999), time()];
-        foreach ($this->app->session->all() as $key => $item) {
-            if (stripos($key, 'csrf') === 0 && isset($item['time'])) {
-                if ($item['time'] + 600 < $time) $this->clearFormToken($key);
-            }
-        }
-        $data = ['node' => NodeService::instance()->fullnode($node), 'token' => $token, 'time' => $time];
-        $this->app->session->set($token, $data);
-        return $data;
-    }
+    
 }

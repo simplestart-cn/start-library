@@ -59,7 +59,7 @@ class CodeExtend
      * @param string $prefix
      * @return string
      */
-    public static function uniqueNumber($size = 12, $prefix = '')
+    public static function uniqueNumber($size = 16, $prefix = '')
     {
         $time = time() . '';
         if ($size < 10) $size = 10;

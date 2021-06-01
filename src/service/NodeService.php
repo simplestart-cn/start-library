@@ -22,8 +22,6 @@ use start\extend\DataExtend;
  */
 class NodeService extends Service
 {
-
-    public $model = 'start\model\Node';
     
     /**
      * 驼峰转下划线规则

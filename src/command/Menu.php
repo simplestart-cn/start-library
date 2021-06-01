@@ -13,9 +13,8 @@
 namespace start\command;
 
 use start\Command;
+use start\AppService;
 use start\service\MenuService;
-use start\service\NodeService;
-
 use think\console\Input;
 use think\console\Output;
 use think\console\input\Argument;
@@ -41,20 +40,20 @@ class Menu extends Command
      */
     public function execute(Input $input, Output $output)
     {
-        $app = $input->getArgument('app');
-        $apps = NodeService::instance()->getApps();
+        $app     = $input->getArgument('app');
+        $apps    = AppService::getApps();
         $service = MenuService::instance();
-        if(!empty($app)){
-        	$output->writeln("start building {$app}...");
-        	$res = $service->building($app);
-        	$output->writeln("{$app} complete.");
-        }else{
-        	$output->writeln("start building...");
-        	foreach ($apps as $name) {
-        		$res = $service->building($name);
-        		$output->writeln("{$name} complete.");
-        	}
-        	$output->writeln("all complete !");
+        if (!empty($app)) {
+            $output->writeln("start building {$app}...");
+            $res = $service->building($app);
+            $output->writeln("{$app} complete.");
+        } else {
+            $output->writeln("start building...");
+            foreach ($apps as $name) {
+                $res = $service->building($name);
+                $output->writeln("{$name} complete.");
+            }
+            $output->writeln("all complete !");
         }
     }
 

@@ -131,25 +131,7 @@ class ConfigService extends Service
         $field = isset($field) && !empty($field) ? $field : 'all';
         return [strtolower($app), strtolower($field)];
     }
-
-    /**
-     * 写入系统日志
-     * @param string $action
-     * @param string $content
-     * @return integer
-     */
-    public function dolog($action, $content)
-    {
-        return $this->app->db->name('CoreOperation')->insert([
-            'node'      => NodeService::instance()->getCurrent(),
-            'action'    => $action,
-            'content'   => $content,
-            'geoip'     => $this->app->request->ip() ?: '127.0.0.1',
-            'user_id'   => get_user_id() ?: 0,
-            'user_name' => get_user_name() ?: '-',
-        ]);
-    }
-
+    
     /**
      * 打印输出数据到文件
      * @param mixed $data 输出的数据

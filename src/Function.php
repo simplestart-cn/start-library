@@ -11,102 +11,59 @@
 // +----------------------------------------------------------------------
 
 use think\exception\HttpResponseException;
-use start\extend\HttpExtend;
-use start\service\AuthService;
-use start\service\ConfigService;
-use start\service\TokenService;
 use start\Storage;
+use start\AppService;
+use start\extend\HttpExtend;
+use start\extend\CodeExtend;
+use start\service\TokenService;
 use think\facade\Config;
 
-if (!function_exists('putlog')) {
+if (!function_exists('debug')) {
     /**
      * 打印输出数据到文件
      * @param mixed $data 输出的数据
      * @param boolean $new 强制替换文件
      * @param string $file 保存文件名称
      */
-    function putlog($data, $file = null, $new = false)
+    function debug($data, $file = null, $new = false)
     {
-        ConfigService::instance()->putlog($data, $file, $new);
+        AppService::instance()->debug($data, $file, $new);
     }
 }
-if (!function_exists('dolog')) {
+if (!function_exists('unique_date')) {
     /**
-     * 写入系统日志
-     * @param string $action 日志行为
-     * @param string $content 日志内容
-     * @return boolean
+     * 唯一日期编码
+     * @param  integer $size   长度
+     * @param  string  $prefix 前缀
+     * @return string
      */
-    function dolog($action, $content)
+    function unique_date($size = 16, $prefix = '')
     {
-        return ConfigService::instance()->dolog($action, $content);
+        CodeExtend::uniqueDate($size, $prefix);
     }
 }
-if (!function_exists('get_user')) {
+if (!function_exists('unique_number')) {
     /**
-     * 获取当前管理员ID
-     * @param string $node
-     * @return boolean
-     * @throws ReflectionException
+     * 唯一数字编码
+     * @param  integer $size   长度
+     * @param  string  $prefix 前缀
+     * @return string
      */
-    function get_user($force = true)
+    function unique_number($size = 16, $prefix = '')
     {
-        return AuthService::instance()->getUser($force);
+        CodeExtend::uniqueNumber($size, $prefix);
     }
 }
-if (!function_exists('get_user_id')) {
+if (!function_exists('unique_id')) {
     /**
-     * 获取当前管理员ID
-     * @param string $node
-     * @return boolean
-     * @throws ReflectionException
+     * 唯一字符编码
+     * @param  integer $size   长度
+     * @param  string  $prefix 前缀
+     * @return string
      */
-    function get_user_id($force = true)
+    function unique_id($size = 32, $prefix = '')
     {
-        return AuthService::instance()->getUserId($force);
-    }
-}
-if (!function_exists('get_user_name')) {
-    /**
-     * 获取当前管理员名称
-     * @param string $node
-     * @return boolean
-     * @throws ReflectionException
-     */
-    function get_user_name($force = true)
-    {
-        return AuthService::instance()->getUserName($force);
-    }
-}
-if (!function_exists('auth')) {
-    /**
-     * 访问权限检查
-     * @param string $node
-     * @return boolean
-     * @throws ReflectionException
-     */
-    function auth($node)
-    {
-        return AuthService::instance()->check($node);
-    }
-}
-if (!function_exists('conf')) {
-    /**
-     * 获取或配置系统参数
-     * @param string $name 参数名称
-     * @param string $value 参数内容
-     * @return mixed
-     * @throws \think\db\exception\DataNotFoundException
-     * @throws \think\db\exception\DbException
-     * @throws \think\db\exception\ModelNotFoundException
-     */
-    function conf($name = '', $value = null, $field = 'value')
-    {
-        if (is_null($value) && is_string($name)) {
-            return ConfigService::instance()->get($name);
-        } else {
-            return ConfigService::instance()->set($name, $value, $field);
-        }
+        CodeExtend::uniqueId($size, $prefix);
     }
 }
 if (!function_exists('build_token')) {
@@ -145,6 +102,22 @@ if (!function_exists('http_post')) {
     function http_post($url, $data, $options = [])
     {
         return HttpExtend::post($url, $data, $options);
+    }
+}
+if (!function_exists('form_submit')) {
+    /**
+     * 以FormData模拟网络请求
+     * @param string $url 模拟请求地址
+     * @param array $data 模拟请求参数数据
+     * @param array $file 提交文件 [field,name,content]
+     * @param array $header 请求头部信息，默认带 Content-type
+     * @param string $method 模拟请求的方式 [GET,POST,PUT]
+     * @param boolean $returnHeader 是否返回头部信息
+     * @return boolean|string
+     */
+    function form_submit($url, array $data = [], array $file = [], array $header = [], $method = 'POST', $returnHeader = true)
+    {
+        return HttpExtend::submit($url, $data, $file, $header, $method, $returnHeader);
     }
 }
 if (!function_exists('throw_error')) {

@@ -12,12 +12,13 @@
 
 namespace start;
 
-use start\service\AuthService;
-use start\service\ConfigService;
-use think\middleware\SessionInit;
+
 use think\Request;
 use think\Service;
 use think\facade\Config;
+use think\middleware\SessionInit;
+use start\service\RuntimeService;
+// use start\service\ConfigService;
 use function Composer\Autoload\includeFile;
 
 /**
@@ -33,7 +34,7 @@ class Library extends Service
     public function boot()
     {
         // 动态绑定运行配置
-        ConfigService::instance()->bindRuntime();
+        RuntimeService::instance()->bindRuntime();
 
         // 绑定插件应用
         $this->app->event->listen('HttpRun', function () {
@@ -80,26 +81,6 @@ class Library extends Service
             if ($this->app->request->request('not_init_session', 0) == 0) {
                 $this->app->middleware->add(SessionInit::class);
             }
-            // 注册访问处理中间键
-            $this->app->middleware->add(function (Request $request, \Closure $next) {
-                $header = [];
-                if (($origin = $request->header('origin', '*')) !== '*') {
-                    $header['Access-Control-Allow-Origin'] = $origin;
-                    $header['Access-Control-Allow-Methods'] = 'GET,POST,PATCH,PUT,DELETE';
-                    $header['Access-Control-Allow-Headers'] = 'Authorization,Content-Type,If-Match,If-Modified-Since,If-None-Match,If-Unmodified-Since,X-Requested-With';
-                    $header['Access-Control-Expose-Headers'] = 'User-Form-Token,User-Token,Token';
-                }
-                // 访问模式及访问权限检查
-                if ($request->isOptions()) {
-                    return response()->code(204)->header($header);
-                } elseif (AuthService::instance()->check() || env('AUTH_DEBUG')) {
-                    return $next($request)->header($header);
-                } elseif (AuthService::instance()->isLogin()) {
-                    return json(['code' => 0, 'msg' => lang('not_auth')])->header($header);
-                } else {
-                    return json(['code' => -1, 'msg' => lang('not_login'), 'url' => url('core/index/index')])->header($header);
-                }
-            }, 'route');
         }
     }
 }

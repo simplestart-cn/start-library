@@ -1,13 +1,13 @@
 <?php
 
 // +----------------------------------------------------------------------
-// | Simplestart Thinkphp
+// | Simplestart Library
 // +----------------------------------------------------------------------
 // | 版权所有: http://www.simplestart.cn copyright 2020
 // +----------------------------------------------------------------------
 // | 开源协议: https://www.apache.org/licenses/LICENSE-2.0.txt
 // +----------------------------------------------------------------------
-// | 仓库地址: https://github.com/simplestart-cn/think-start
+// | 仓库地址: https://github.com/simplestart-cn/start-library
 // +----------------------------------------------------------------------
 
 namespace start\model;

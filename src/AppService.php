@@ -10,9 +10,9 @@
 // | 仓库地址: https://github.com/simplestart-cn/think-start
 // +----------------------------------------------------------------------
 
-namespace start\service;
-
-use start\Service;
+namespace start;
+use start\service\MenuService;
+use start\service\ConfigService;
 
 /**
  * App服务
@@ -349,6 +349,23 @@ class AppService extends Service
     }
 
     /**
+     * 获取所有应用名称
+     * @return [type] [description]
+     */
+    public static function getApps()
+    {
+        $path = self::instance()->app->getBasePath();
+        $apps = [];
+        foreach (glob("{$path}*") as $item) {
+            if (is_dir($item)) {
+                $item = explode(DIRECTORY_SEPARATOR, $item);
+                array_push($apps, end($item));
+            }
+        }
+        return $apps;
+    }
+
+    /**
      * 获取可用的
      * @return [type] [description]
      */
@@ -554,6 +571,22 @@ class AppService extends Service
         }
 
         return ['rules' => $rules, 'ignore' => $ignore, 'list' => $data];
+    }
+
+    /**
+     * 打印输出数据到文件
+     * @param mixed $data 输出的数据
+     * @param boolean $new 强制替换文件
+     * @param string|null $file 文件名称
+     */
+    public function debug($data, $file = null, $new = false)
+    {
+        if (is_null($file)) {
+            $file = $this->app->getRootPath() . 'runtime' . DIRECTORY_SEPARATOR . date('Ymd') . '.log';
+        }
+
+        $str = (is_string($data) ? $data : ((is_array($data) || is_object($data)) ? print_r($data, true) : var_export($data, true))) . PHP_EOL;
+        $new ? file_put_contents($file, $str) : file_put_contents($file, $str, FILE_APPEND);
     }
 
     /**

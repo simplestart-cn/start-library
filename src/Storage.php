@@ -61,7 +61,7 @@ abstract class Storage
     {
         $this->config = $config;
         $class = ucfirst(strtolower(is_null($config) || $config['engine'] == 'local' ? 'local' : $config['engine']));
-        if (class_exists($object = "think\\start\\storage\\{$class}")) {
+        if (class_exists($object = "start\\storage\\{$class}")) {
             $this->engine = new $object($config);
         } else {
             throw new Exception("File driver [{$class}] does not exist.");
@@ -92,7 +92,7 @@ abstract class Storage
     public static function instance($config = null)
     {
         $class = ucfirst(strtolower(is_null($config) ? 'local' : $config['engine']));
-        if (class_exists($object = "think\\start\\storage\\{$class}")) {
+        if (class_exists($object = "start\\storage\\{$class}")) {
             return Container::getInstance()->make($object)->initialize($config);
         } else {
             throw new Exception("File driver [{$class}] does not exist.");

@@ -1,13 +1,15 @@
 <?php
+
 // +----------------------------------------------------------------------
-// | ThinkPHP [ WE CAN DO IT JUST THINK IT ]
+// | Simplestart Library
 // +----------------------------------------------------------------------
-// | Copyright (c) 2006-2016 http://thinkphp.cn All rights reserved.
+// | 版权所有: http://www.simplestart.cn copyright 2020
 // +----------------------------------------------------------------------
-// | Licensed ( http://www.apache.org/licenses/LICENSE-2.0 )
+// | 开源协议: https://www.apache.org/licenses/LICENSE-2.0.txt
 // +----------------------------------------------------------------------
-// | Author: liu21st <liu21st@gmail.com>
+// | 仓库地址: https://github.com/simplestart-cn/start-library
 // +----------------------------------------------------------------------
+
 namespace think\app\command;
 
 use think\console\Command;
@@ -21,7 +23,7 @@ class Clear extends Command
     protected function configure()
     {
         // 指令配置
-        $this->setName('clear')
+        $this->setName('start:clear')
             ->addArgument('app', Argument::OPTIONAL, 'app name .')
             ->addOption('cache', 'c', Option::VALUE_NONE, 'clear cache file')
             ->addOption('log', 'l', Option::VALUE_NONE, 'clear log file')
