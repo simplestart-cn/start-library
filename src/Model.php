@@ -172,7 +172,7 @@ class Model extends \think\Model
         if (!is_array($input)) {
             return $this->where($input);
         } else if (count($input) > 0) {
-            // 数据字段
+            // 数据字典
             $_table = $this->name ?: $this->getTable();
             $_tableFields = Cache::get($_table.'_fields');
             if(empty($_tableFields)){
@@ -184,8 +184,8 @@ class Model extends \think\Model
             $relation = array(); // 关联模型及条件
             foreach ($input as $key => $value) {
                 // 参数过滤
-                if(!in_array($key, $_tableFields)){
-                    if(stripos($key, '|') === false || stripos($key, '.') === false){
+                if(stripos($key, '|') === false && stripos($key, '.') === false){
+                    if(!in_array($key, $_tableFields)){
                         unset($input[$key]);
                     }
                 }

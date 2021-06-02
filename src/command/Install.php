@@ -76,7 +76,7 @@ class Install extends Command
     {
         $this->setName('start:install');
         $this->addArgument('app', Argument::OPTIONAL, 'App name');
-        $this->setDescription("Core or app install and update for StartAdmin");
+        $this->setDescription("Core or app install and update for StartCloud");
     }
 
     protected function execute(Input $input, Output $output)

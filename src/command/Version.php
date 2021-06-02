@@ -26,7 +26,7 @@ class Version extends Command
     protected function configure()
     {
         $this->setName('start:version');
-        $this->setDescription("Library and ThinkPHP Version for StartAdmin");
+        $this->setDescription("Library and ThinkPHP Version for StartCloud");
     }
 
     /**

@@ -58,14 +58,14 @@ class AppService extends Service
      */
     protected function initialize()
     {
-        // 应用框架版本
+        // 框架版本
         $this->version = $this->app->config->get('app.start_cloud');
         if (empty($this->version)) {
             $this->version = 'last';
         }
-        // 线上应用代码
+        // 应用市场
         $this->uri = "https://appstore.simplestart.cn";
-        // 当前应用根目录
+        // 应用目录
         $this->path = strtr($this->app->getRootPath(), '\\', '/');
         return $this;
     }

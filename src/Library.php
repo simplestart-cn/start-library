@@ -18,7 +18,6 @@ use think\Service;
 use think\facade\Config;
 use think\middleware\SessionInit;
 use start\service\RuntimeService;
-// use start\service\ConfigService;
 use function Composer\Autoload\includeFile;
 
 /**
