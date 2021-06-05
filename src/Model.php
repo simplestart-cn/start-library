@@ -47,6 +47,26 @@ class Model extends \think\Model
      */
     protected $order = ['create_time desc'];
 
+    /**
+     * 架构函数
+     * @access public
+     * @param array $data 数据
+     */
+    public function __construct(array $data = [])
+    {
+        parent::__construct($data);
+        // 当前模型名
+        if(!empty($this->name)){
+            if(empty($this->table)){
+                $this->table = $this->name;
+            }
+            $name       = str_replace('\\', '/', static::class);
+            $this->name = basename($name);
+        }
+        // 执行初始化操作
+        $this->initialize();
+    }
+
     // 模型初始化
     protected static function init()
     {
@@ -179,8 +199,8 @@ class Model extends \think\Model
                 $tableFields = $this->getTableFields();
                 Cache::set($table.'_fields', $tableFields);
             }
-            $query    = null; // 查询对象(Query)
-            // $relation = array(); // 关联模型及条件
+            $query     = null;  // 查询对象(Query)
+            $withQuery = false; // 是否关联查询
             foreach ($input as $key => $value) {
                 // 参数过滤
                 if(stripos($key, '|') === false && stripos($key, '.') === false && !in_array($key, $tableFields)){
@@ -189,6 +209,7 @@ class Model extends \think\Model
                 // 关联查询
                 if(stripos($key, '|') !== false && stripos($key, '.') !== false) {
                     // 关联 OR 查询
+                    $withQuery = true;
                     $orQuery = explode('|', $key);
                     $relation = array();
                     foreach ($orQuery as $orField) {
@@ -209,7 +230,7 @@ class Model extends \think\Model
                                 $query = $this->parseFilter($query, $condition, $table, "OR");
                             }
                         }else{
-                            $relateTable = ucfirst($model);
+                            $relateTable = $this->$model()->getName();
                             if (is_null($query)) {
                                 $query = $this->hasWhere($model, $this->parseFilter($this, $condition, $relateTable, 'OR'));
                             } else {
@@ -220,8 +241,9 @@ class Model extends \think\Model
                     unset($input[$key]);
                 }else if (stripos($key, '.') !== false) {
                     // 关联 AND 查询
+                    $withQuery = true;
                     list($model, $field) = explode('.', $key);
-                    $relateTable = ucfirst($model);
+                    $relateTable = $this->$model()->getName();
                     if (is_null($query)) {
                         $query = $this->hasWhere($model, $this->parseFilter($this, [$field => $value], $relateTable));
                     } else {
@@ -230,12 +252,11 @@ class Model extends \think\Model
                     unset($input[$key]);
                 }
             }
-
             // 单表查询
             if (is_null($query)) {
-                $query = $this->parseFilter($this, $input,  $table);
+                $query = $this->parseFilter($this, $input, $withQuery ? $table : '');
             } else {
-                $query = $this->parseFilter($query, $input, $table);
+                $query = $this->parseFilter($query, $input, $withQuery ? $table : '');
             }
             return $query ?: $this;
         }
@@ -273,27 +294,4 @@ class Model extends \think\Model
         }
         return $query;
     }
-
-    /**
-    * 下划线转驼峰
-    * 思路:
-    * step1.原字符串转小写,原字符串中的分隔符用空格替换,在字符串开头加上分隔符
-    * step2.将字符串中每个单词的首字母转换为大写,再去空格,去字符串首部附加的分隔符.
-    */
-    private function toCamelCase($uncamelized_words, $separator='_')
-    {
-        $uncamelized_words = $separator. str_replace($separator, " ", strtolower($uncamelized_words));
-        return ltrim(str_replace(" ", "", ucwords($uncamelized_words)), $separator );
-    }
-
-    /**
-    * 驼峰命名转下划线命名
-    * 思路:
-    * 小写和大写紧挨一起的地方,加上分隔符,然后全部转小写
-    */
-    private function toUnderScore($camelCaps, $separator='_')
-    {
-        return strtolower(preg_replace('/([a-z])([A-Z])/', "$1" . $separator . "$2", $camelCaps));
-    }
-
 }
