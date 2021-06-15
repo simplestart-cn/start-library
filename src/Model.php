@@ -13,8 +13,9 @@
 namespace start;
 
 use think\App;
-use think\Container;
 use think\Request;
+use think\Container;
+use think\Collection;
 use think\facade\Cache;
 
 /**
