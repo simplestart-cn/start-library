@@ -39,7 +39,7 @@ if (!function_exists('unique_date')) {
      */
     function unique_date($size = 16, $prefix = '')
     {
-        CodeExtend::uniqueDate($size, $prefix);
+        return CodeExtend::uniqueDate($size, $prefix);
     }
 }
 if (!function_exists('unique_number')) {
@@ -51,7 +51,7 @@ if (!function_exists('unique_number')) {
      */
     function unique_number($size = 16, $prefix = '')
     {
-        CodeExtend::uniqueNumber($size, $prefix);
+        return CodeExtend::uniqueNumber($size, $prefix);
     }
 }
 if (!function_exists('unique_id')) {
@@ -63,7 +63,7 @@ if (!function_exists('unique_id')) {
      */
     function unique_id($size = 32, $prefix = '')
     {
-        CodeExtend::uniqueId($size, $prefix);
+        return CodeExtend::uniqueId($size, $prefix);
     }
 }
 if (!function_exists('build_token')) {

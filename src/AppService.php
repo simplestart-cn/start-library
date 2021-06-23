@@ -11,6 +11,7 @@
 // +----------------------------------------------------------------------
 
 namespace start;
+use start\extend\HttpExtend;
 use start\service\MenuService;
 use start\service\ConfigService;
 
@@ -146,6 +147,7 @@ class AppService extends Service
     public static function install($name)
     {
         $app = self::getPackInfo($name);
+        $path = self::instance()->app->getBasePath() . $name;
         foreach ($app as $key => $value) {
             if (stripos($key, '-') !== false) {
                 $app[str_replace('-', '_', $key)] = $value;
@@ -158,13 +160,11 @@ class AppService extends Service
         $model = self::model();
         self::startTrans();
         try {
-            // 保存应用记录
-            $model->save($app);
-            // 安装数据表
-            // .....
-            //
-            //
-            //
+            // 执行安装脚本
+            $installer = $path . DIRECTORY_SEPARATOR . 'installer'.DIRECTORY_SEPARATOR.'install.php';
+            if(file_exists($installer)){
+                require_once $installer;
+            }
             // 添加默认配置
             if (isset($app['config']) && count($app['config'])) {
                 $config = $app['config'];
@@ -176,6 +176,10 @@ class AppService extends Service
             }
             // 构建权限菜单
             MenuService::instance()->building($app['name']);
+            // 添加应用记录
+            if($name != 'core'){
+                $model->save($app);
+            }
             self::startCommit();
             return $model;
         } catch (Exception $e) {
@@ -186,19 +190,37 @@ class AppService extends Service
     }
 
     /**
+     * 升级(待完成)
+     * @param  [type] $app [description]
+     * @return [type]      [description]
+     */
+    public static function upgrade($name)
+    {
+
+    }
+
+    /**
      * 卸载(待完成)
      * @param  [type] $app [description]
      * @return [type]      [description]
      */
     public static function uninstall($name)
     {
+        $app = self::getPackInfo($name);
+        $path = self::instance()->app->getBasePath() . $name;
+
         $model = self::getInfo(['name' => $name]);
         if (!$model) {
             throw_error(lang('app_does_not_exist'));
         }
-        $app = self::getPackInfo($name);
+
         self::startTrans();
         try {
+            // 执行卸载脚本
+            $uninstaller = $path . DIRECTORY_SEPARATOR . 'installer'.DIRECTORY_SEPARATOR.'uninstall.php';
+            if(file_exists($uninstaller)){
+                require_once $uninstaller;
+            }
             // 删除权限菜单
             MenuService::model()->where(['app' => $name])->delete();
             // 删除默认配置
@@ -225,10 +247,10 @@ class AppService extends Service
 
     /**
      * 删除安装包
-     * @param  array  $input [description]
+     * @param  string  $name [description]
      * @return [type]        [description]
      */
-    public static function remove($input = [])
+    public static function remove($name)
     {
         // 删除对应数据表
         // ....
@@ -236,13 +258,13 @@ class AppService extends Service
         // 删除权限菜单
         MenuService::model()->where(['app' => $name])->delete();
         // 删除应用目录
-        $path = self::instance()->app->getBasePath() . $input['name'] . DIRECTORY_SEPARATOR;
+        $path = self::instance()->app->getBasePath() . $name . DIRECTORY_SEPARATOR;
         return self::_removeFolder($path);
     }
 
     /**
      * 删除文件或文件夹
-     * @param  [type] $path [description]
+     * @param  string $path [description]
      * @return [type]       [description]
      */
     private static function _removeFolder($path)
@@ -283,16 +305,6 @@ class AppService extends Service
     }
 
     /**
-     * 升级(待完成)
-     * @param  [type] $app [description]
-     * @return [type]      [description]
-     */
-    public static function upgrade($name)
-    {
-
-    }
-
-    /**
      * 是否已下载
      * @param  [type] $app [description]
      * @return [type]      [description]
@@ -330,7 +342,7 @@ class AppService extends Service
 
     /**
      * 获取包信息
-     * @param  [type] $name [description]
+     * @param  string $name [description]
      * @return [type]       [description]
      */
     public static function getPackInfo($name)

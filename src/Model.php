@@ -12,7 +12,6 @@
 
 namespace start;
 
-use think\App;
 use think\Request;
 use think\Container;
 use think\Collection;
@@ -26,10 +25,10 @@ use think\facade\Cache;
 class Model extends \think\Model
 {
     /**
-     * 应用实例
-     * @var App
+     * 是否Replace
+     * @var bool
      */
-    protected $app;
+    private $replace = false;
 
     /**
      * 关联
@@ -151,6 +150,7 @@ class Model extends \think\Model
      */
     public function info($filter, $with = [])
     {
+
         if (!is_array($filter)) {
             return $this->with(array_merge($this->with, $with))->find($filter);
         } else {
@@ -201,7 +201,7 @@ class Model extends \think\Model
             // 数据字典
             $table = $this->getTable();
             $tableFields = Cache::get($table.'_fields');
-            if(empty($tableFields)){
+            if(empty($tableFields) || env('APP_DEBUG')){
                 $tableFields = $this->getTableFields();
                 Cache::set($table.'_fields', $tableFields);
             }
@@ -353,9 +353,11 @@ class Model extends \think\Model
                 if ($this->exists || (!empty($auto) && isset($data[$pk]))) {
                     $model = self::where($pk, $data[$pk])->find();
                     if (!empty($suffix)) {
-                        $result[$key] = $model->setSuffix($suffix)->save($data);
+                        $model->setSuffix($suffix)->save($data);
+                        $result[$key] = $model;
                     }else{
-                        $result[$key] = $model->save($data);
+                        $model->save($data);
+                        $result[$key] = $model;
                     }
                 } else {
                     $result[$key] = static::create($data, $this->field, $this->replace, $suffix);

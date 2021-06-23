@@ -13,7 +13,7 @@
 namespace start\command;
 
 use start\Command;
-use start\service\AppService;
+use start\AppService;
 
 use think\console\Input;
 use think\console\input\Argument;
