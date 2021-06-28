@@ -64,7 +64,7 @@ class ConfigService extends Service
     {
         list($app, $field) = $this->parse($name);
         $config = Cache::get($app.'_config') ?: [];
-        if (!count($config) || env('DEBUG')) {
+        if (!count($config) || env('APP_DEBUG')) {
             foreach (self::model()->where(compact('app'))->select() as $vo) {
                 $config[$vo['app']][$vo['field']] = $vo['value'];
             }

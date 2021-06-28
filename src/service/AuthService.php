@@ -17,25 +17,25 @@ use start\AppService;
 use start\extend\DataExtend;
 
 /**
- * 系统菜单管理服务
- * Class MenuService
+ * 系统权限服务
+ * Class AuthService
  * @package app\service
  */
-class MenuService extends Service
+class AuthService extends Service
 {
 
-    public $model = 'start\model\Menu';
+    public $model = 'start\model\Auth';
     
     /**
-     * 构建菜单
+     * 构建权限
      * 并保留后台可编辑字段
      * @return [type] [description]
      */
     public function building($app = '')
     {
-        // 注解菜单
+        // 注解权限
         $nodes    = NodeService::instance()->getAll($app, true);
-        $nodeMenu = array();
+        $authNode = array();
         foreach ($nodes as $item) {
             $temp              = array();
             $temp['app']       = empty($item['app']) ? $app : $item['app'];
@@ -53,24 +53,24 @@ class MenuService extends Service
             $temp['redirect']  = $item['ismenu']['redirect'] ?? '';
             $temp['hidden']    = false;
             $temp['no_cache']  = false;
-            $nodeMenu[$item['node']] = $temp;
+            $authNode[$item['node']] = $temp;
         }
-        // 拓展菜单
+        // 拓展权限
         $appInfo = AppService::getPackInfo($app);
         if ($appInfo) {
-            $nodeMenu[$app]['icon']  = $appInfo['icon'] ?? '';
-            $nodeMenu[$app]['title'] = $appInfo['title'] ?? $appInfo['name'];
+            $authNode[$app]['icon']  = $appInfo['icon'] ?? '';
+            $authNode[$app]['title'] = $appInfo['title'] ?? $appInfo['name'];
             if (isset($appInfo['menu'])) {
                 foreach ($appInfo['menu'] as &$extend) {$extend['app'] = $app;}
                 $menuExtend = array_combine(array_column($appInfo['menu'], 'node'), array_values($appInfo['menu']));
-                $nodeMenu   = array_merge($nodeMenu, $menuExtend);
+                $authNode   = array_merge($authNode, $menuExtend);
             }
         }
-        // 权限菜单
+        // 权限权限
         $dbNodes   = $this->model->select()->toArray();
         $dbNodes   = array_combine(array_column($dbNodes, 'node'), array_values($dbNodes));
         $dbKeys  = array_combine(array_column($dbNodes, 'id'), array_values($dbNodes));
-        foreach ($nodeMenu as &$menu) {
+        foreach ($authNode as &$menu) {
             if(isset($dbNodes[$menu['node']])){
                 $menu['id'] = $dbNodes[$menu['node']]['id'];
             }
@@ -78,30 +78,30 @@ class MenuService extends Service
                 $parent         = $dbNodes[$menu['parent']];
                 $menu['pid']    = $parent['id'];
                 $menu['parent'] = $parent['node'];
-                if(!isset($nodeMenu[$parent['node']])){
+                if(!isset($authNode[$parent['node']])){
                     if($parent['pid'] && isset($dbKeys[$parent['pid']])){
                         $parent['parent'] = $dbKeys[$parent['pid']]['node'];
                         unset($parent['create_time']);
                         unset($parent['update_time']);
                     }
-                    $nodeMenu[$parent['node']] = $parent;
+                    $authNode[$parent['node']] = $parent;
                 }
             }
         }
-        // 保存菜单
-        $tree = DataExtend::arr2tree($nodeMenu, 'node', 'parent', 'children');
-        $menus = $this->saveBuilding($tree, 0);
-        return $menus;
+        // 保存权限
+        $tree = DataExtend::arr2tree($authNode, 'node', 'parent', 'children');
+        $auths = $this->saveBuilding($tree, 0);
+        return $auths;
     }
 
     /**
-     * 更新菜单信息
+     * 更新权限信息
      * @param  [type] $nodes [description]
      * @return [type]        [description]
      */
     private function saveBuilding($nodes = [], $pid = 0)
     {
-        $menus = array();
+        $auths = array();
         foreach ($nodes as $key => &$data) {
             if ($pid === 0 && empty($data['children'])) {
                 continue;
@@ -120,9 +120,9 @@ class MenuService extends Service
             if ($model->id && isset($data['children']) && count($data['children']) > 0) {
                 $temp['children'] = $this->saveBuilding($data['children'], $model->id);
             }
-            $menus[] = $temp;
+            $auths[] = $temp;
         }
-        return $menus;
+        return $auths;
     }
 
 }

@@ -14,23 +14,23 @@ namespace start\command;
 
 use start\Command;
 use start\AppService;
-use start\service\MenuService;
+use start\service\AuthService;
 use think\console\Input;
 use think\console\Output;
 use think\console\input\Argument;
 
 /**
- * 数据库修复优化指令
- * Class Database
+ * 权限菜单构建命令
+ * Class Auth
  * @package start\command
  */
-class Menu extends Command
+class Auth extends Command
 {
     public function configure()
     {
-        $this->setName('start:menu');
+        $this->setName('start:auth');
         $this->addArgument('app', Argument::OPTIONAL, 'App name');
-        $this->setDescription('Building app menus.');
+        $this->setDescription('Building app auth.');
     }
 
     /**
@@ -42,12 +42,16 @@ class Menu extends Command
     {
         $app     = $input->getArgument('app');
         $apps    = AppService::getApps();
-        $service = MenuService::instance();
+        $service = AuthService::instance();
         if (!empty($app)) {
             $output->writeln("start building {$app}...");
             $res = $service->building($app);
             $output->writeln("{$app} complete.");
         } else {
+            if(empty($apps)){
+                $output->writeln("app not found!");
+                return false;
+            }
             $output->writeln("start building...");
             foreach ($apps as $name) {
                 $res = $service->building($name);

@@ -43,7 +43,7 @@ class Library extends Service
         $this->commands([
             'start\command\Build',
             'start\command\Clear',
-            'start\command\Menu',
+            'start\command\Auth',
             'start\command\Install',
             'start\command\Version',
             'start\command\Database',

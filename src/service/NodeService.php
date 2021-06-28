@@ -45,12 +45,15 @@ class NodeService extends Service
     public function getCurrent($type = '')
     {
         $prefix = $this->app->getNamespace();
-        $middle = '\\' . $this->nameTolower($this->app->request->controller());
-        $suffix = ($type === 'controller') ? '' : ('\\' . $this->app->request->action());
+        // 这两个方法有bug
+        // $middle = $this->nameTolower($this->app->request->controller());
+        // $suffix = ($type === 'controller') ? '' : ($this->app->request->action());
+        $pathinfo = str_replace('/', '\\', $this->app->request->pathinfo());
         if($prefix === 'core'){
-            return strtr($prefix . $middle . $suffix, '\\', '/');
+            return strtr($prefix . '\\' . $pathinfo, '\\', '/');
         }
-        return strtr(substr($prefix, stripos($prefix, '\\') + 1) . $middle . $suffix, '\\', '/');
+        return strtr(substr($prefix, stripos($prefix, '\\') + 1). '\\' . $pathinfo, '\\', '/');
+        
     }
 
     /**
@@ -71,7 +74,7 @@ class NodeService extends Service
 
     /**
      * 获取节点列表
-     * @return [type] [description]
+     * @return array [description]
      */
     public function getAll($app = '', $force = false)
     {

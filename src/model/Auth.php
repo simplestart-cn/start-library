@@ -15,7 +15,7 @@ use start\Model;
 /**
  * @mixin think\model
  */
-class Menu extends Model
+class Auth extends Model
 {
-	protected $name = 'core_menu';
+	protected $name = 'core_auth';
 }

@@ -131,7 +131,7 @@ class Model extends \think\Model
             $paging['page'] = input('page', 1, 'trim');
         }
         if (!isset($paging['per_page'])) {
-            $paging['per_page'] = input('per_page', 20, 'trim');
+            $paging['per_page'] = input('per_page', 30, 'trim');
         }
         return $this
             ->filter(array_merge($this->where, $filter))

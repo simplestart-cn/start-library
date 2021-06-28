@@ -12,10 +12,11 @@
 
 use think\exception\HttpResponseException;
 use start\Storage;
-use start\AppService;
 use start\extend\HttpExtend;
 use start\extend\CodeExtend;
+use start\extend\DataExtend;
 use start\service\TokenService;
+use start\service\RuntimeService;
 use think\facade\Config;
 
 if (!function_exists('debug')) {
@@ -27,9 +28,47 @@ if (!function_exists('debug')) {
      */
     function debug($data, $file = null, $new = false)
     {
-        AppService::instance()->debug($data, $file, $new);
+        RuntimeService::instance()->debug($data, $file, $new);
     }
 }
+if (!function_exists('data_path')) {
+    /**
+     * 数据目录(临时放这)
+     * @throws ReflectionException
+     */
+    function data_path()
+    {
+        return root_path() .'data' . DIRECTORY_SEPARATOR;
+    }
+}
+
+if (!function_exists('array_to_xml')) {
+    /**
+     * 数组转xml
+     *
+     * @param array   $data 要转换的数据
+     * @param boolean $root 是否返回根节点
+     * @return string
+     */
+    function array_to_xml(array $data, $root = true)
+    {
+        return DataExtend::arr2xml($data, $root);
+    }
+}
+
+if (!function_exists('xml_to_array')) {
+    /**
+     * xml转数组
+     *
+     * @param string $xml
+     * @return array
+     */
+    function xml_to_array(string $xml)
+    {
+        return DataExtend::xml2arr($xml);
+    }
+}
+
 if (!function_exists('unique_date')) {
     /**
      * 唯一日期编码

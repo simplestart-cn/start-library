@@ -62,6 +62,44 @@ class DataExtend
     }
 
     /**
+     * 数组转xml
+     *
+     * @param array   $data 要转换的数据
+     * @param boolean $root 是否返回根节点
+     * @return string
+     */
+    public static function arr2xml(array $data, $root = true)
+    {
+        $str = "";
+        if ($root) {
+            $str .= "<xml>";
+        }
+        foreach ($data as $key => $val) {
+            if (is_array($val)) {
+                $child = array_to_xml($val, false);
+                $str .= "<$key>$child</$key>";
+            } else {
+                $str .= "<$key><![CDATA[$val]]></$key>";
+            }
+        }
+        if ($root) {
+            $str .= "</xml>";
+        }
+        return $str;
+    }
+
+    /**
+     * xml转数组
+     *
+     * @param string $xml
+     * @return array
+     */
+    public static function xml2arr(string $xml)
+    {
+        return json_decode(json_encode(simplexml_load_string($xml, 'SimpleXMLElement', LIBXML_NOCDATA)), true);
+    }
+
+    /**
      * 获取数据树子ID
      * @param array $list 数据列表
      * @param integer $id 起始ID

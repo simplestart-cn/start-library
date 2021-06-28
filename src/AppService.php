@@ -12,7 +12,7 @@
 
 namespace start;
 use start\extend\HttpExtend;
-use start\service\MenuService;
+use start\service\AuthService;
 use start\service\ConfigService;
 
 /**
@@ -130,6 +130,34 @@ class AppService extends Service
     }
 
     /**
+     * 更新配置
+     * @param  array  $name  [description]
+     * @return boolea        [description]
+     */
+    public static function updateConfig($name)
+    {
+        $app = self::getPackInfo($name);
+        if (isset($app['config']) && count($app['config'])) {
+            $config = $app['config'];
+            foreach ($config as &$conf) {
+                $conf['app']        = strtolower($conf['app'] ?? $app['name']);
+                $conf['app_title']  = strtolower($conf['app_title'] ?? $app['title']);
+                $where['app']       = $conf['app'];
+                $where['field']     = $conf['field'];
+                $model = ConfigService::getInfo($where);
+                if($model->id){
+                    unset($conf['value']);
+                    $model->save($conf);
+                }else{
+                    ConfigService::create($conf);
+                }
+            }
+            return true;
+        }
+        return false;
+    }
+
+    /**
      * 下载(待完成)
      * @param  [type] $app [description]
      * @return [type]      [description]
@@ -175,7 +203,7 @@ class AppService extends Service
                 ConfigService::model()->saveAll($config);
             }
             // 构建权限菜单
-            MenuService::instance()->building($app['name']);
+            AuthService::instance()->building($app['name']);
             // 添加应用记录
             if($name != 'core'){
                 $model->save($app);
@@ -222,7 +250,7 @@ class AppService extends Service
                 require_once $uninstaller;
             }
             // 删除权限菜单
-            MenuService::model()->where(['app' => $name])->delete();
+            AuthService::model()->where(['app' => $name])->delete();
             // 删除默认配置
             if (isset($app['config']) && count($app['config'])) {
                 $config = $app['config'];
@@ -256,7 +284,7 @@ class AppService extends Service
         // ....
         // ...
         // 删除权限菜单
-        MenuService::model()->where(['app' => $name])->delete();
+        AuthService::model()->where(['app' => $name])->delete();
         // 删除应用目录
         $path = self::instance()->app->getBasePath() . $name . DIRECTORY_SEPARATOR;
         return self::_removeFolder($path);
@@ -306,8 +334,8 @@ class AppService extends Service
 
     /**
      * 是否已下载
-     * @param  [type] $app [description]
-     * @return [type]      [description]
+     * @param  string $app [description]
+     * @return array      [description]
      */
     public static function isDownload($name)
     {
@@ -583,22 +611,6 @@ class AppService extends Service
         }
 
         return ['rules' => $rules, 'ignore' => $ignore, 'list' => $data];
-    }
-
-    /**
-     * 打印输出数据到文件
-     * @param mixed $data 输出的数据
-     * @param boolean $new 强制替换文件
-     * @param string|null $file 文件名称
-     */
-    public function debug($data, $file = null, $new = false)
-    {
-        if (is_null($file)) {
-            $file = $this->app->getRootPath() . 'runtime' . DIRECTORY_SEPARATOR . date('Ymd') . '.log';
-        }
-
-        $str = (is_string($data) ? $data : ((is_array($data) || is_object($data)) ? print_r($data, true) : var_export($data, true))) . PHP_EOL;
-        $new ? file_put_contents($file, $str) : file_put_contents($file, $str, FILE_APPEND);
     }
 
     /**
