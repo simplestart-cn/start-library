@@ -81,16 +81,27 @@ class NodeService extends Service
         list($nodes, $parents, $methods) = [[], [], array_reverse($this->getMethods($app, $force))];
         foreach ($methods as $node => $method) {
             list($count, $parent) = [substr_count($node, '/'), substr($node, 0, strripos($node, '/'))];
-            if ($count === 2 && (!empty($method['isauth']) || !empty($method['ismenu']))) {
+            if ($count === 2 && (
+                !empty($method['isauth']) || 
+                !empty($method['issuper']) ||
+                !empty($method['isadmin']) ||
+                !empty($method['islogin']) ||
+                !empty($method['ismenu']) ||
+                !empty($method['isview']) ||
+                !empty($method['isopen'])
+                )) {
                 in_array($parent, $parents) or array_push($parents, $parent);
                 $nodes[$node] = [
                     'node' => $node,
                     'title' => $method['title'],
                     'parent' => $parent,
                     'isauth' => $method['isauth'],
+                    'issuper' => $method['issuper'],
+                    'isadmin' => $method['isadmin'],
+                    'islogin' => $method['islogin'],
                     'ismenu' => $method['ismenu'],
                     'isview' => $method['isview'],
-                    'islogin' => $method['islogin']
+                    'isopen' => $method['isopen']
                 ];
             } elseif ($count === 1 && in_array($parent, $parents)) {
                 $nodes[$node] = [
@@ -98,9 +109,12 @@ class NodeService extends Service
                     'title' => $method['title'],
                     'parent' => $parent,
                     'isauth' => $method['isauth'],
+                    'issuper' => $method['issuper'],
+                    'isadmin' => $method['isadmin'],
+                    'islogin' => $method['islogin'],
                     'ismenu' => $method['ismenu'],
                     'isview' => $method['isview'],
-                    'islogin' => $method['islogin']
+                    'isopen' => $method['isopen']
                 ];
             }
         }
@@ -111,18 +125,24 @@ class NodeService extends Service
                 'title' => $method['title'],
                 'parent' => $parent,
                 'isauth' => $method['isauth'],
+                'issuper' => $method['issuper'],
+                'isadmin' => $method['isadmin'],
+                'islogin' => $method['islogin'],
                 'ismenu' => $method['ismenu'],
                 'isview' => $method['isview'],
-                'islogin' => $method['islogin']
+                'isopen' => $method['isopen']
             ];
             $nodes[$parent] = [
                 'node' => $parent,
                 'title' => ucfirst($parent),
                 'parent' => '',
                 'isauth' => $method['isauth'],
+                'issuper' => $method['issuper'],
+                'isadmin' => $method['isadmin'],
+                'islogin' => $method['islogin'],
                 'ismenu' => (boolean)$method['ismenu'],
                 'isview' => $method['isview'],
-                'islogin' => $method['islogin']
+                'isopen' => $method['isopen']
             ];
         }
         return array_reverse($nodes);
@@ -132,7 +152,7 @@ class NodeService extends Service
      * 获取节点树
      * @return [type] [description]
      */
-    public function getTree($force = flase)
+    public function getTree($force = false)
     {
         $nodes = $this->getAll($force);
         return DataExtend::arr2tree($nodes, 'node', 'parent', 'child');
@@ -165,7 +185,7 @@ class NodeService extends Service
     {
         static $data = [];
         if (!$force) {
-            $data = $this->app->cache->get('start_auth_node', []);
+            $data = $this->app->cache->get($app.'_auth_node', []);
             if (count($data) > 0) return $data;
         } else {
             $data = [];
@@ -203,7 +223,7 @@ class NodeService extends Service
             
         }
         $data = array_change_key_case($data, CASE_LOWER);
-        $this->app->cache->set('start_auth_node', $data);
+        $this->app->cache->set($app.'_auth_node', $data);
         return $data;
     }
 
@@ -218,15 +238,18 @@ class NodeService extends Service
 
         $text = strtr($comment, "\n", ' ');
         $title = preg_replace('/^\/\*\s*\*\s*\*\s*(.*?)\s*\*.*?$/', '$1', $text);
-        foreach (['@auth', '@menu', '@login'] as $find) if (stripos($title, $find) === 0) {
+        foreach (['@auth', '@super', '@admin', '@login', '@menu', '@view', '@open'] as $find) if (stripos($title, $find) === 0) {
             $title = $default;
         }
         $method =  [
             'title'   => $title ? $title : $default,
-            'isauth'  => intval(preg_match('/@auth\s*/i', $text)),
-            'ismenu'  => intval(preg_match('/@menu\s*/i', $text)),
-            'isview'  => intval(preg_match('/@view\s*/i', $text)),
-            'islogin' => intval(preg_match('/@login\s*/i', $text)),
+            'isauth'  => intval(preg_match('/@auth\s*/i', $text)),   // 仅限授权访问
+            'issuper' => intval(preg_match('/@super\s*/i', $text)),  // 仅限超管访问
+            'isadmin' => intval(preg_match('/@admin\s*/i', $text)),  // 仅限管理访问
+            'islogin' => intval(preg_match('/@login\s*/i', $text)),  // 登录即可访问
+            'ismenu'  => intval(preg_match('/@menu\s*/i', $text)),   // 作为菜单显示
+            'isview'  => intval(preg_match('/@view\s*/i', $text)),   // 渲染视图模板
+            'isopen'  => intval(preg_match('/@open\s*/i', $text)),   // 是否开放菜单
         ];
         // 匹配设置的menu值
         if($method['ismenu']){

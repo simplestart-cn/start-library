@@ -12,9 +12,7 @@
 
 namespace start;
 
-use think\Request;
 use think\Container;
-use think\Collection;
 use think\facade\Cache;
 
 /**
@@ -150,7 +148,6 @@ class Model extends \think\Model
      */
     public function info($filter, $with = [])
     {
-
         if (!is_array($filter)) {
             return $this->with(array_merge($this->with, $with))->find($filter);
         } else {
@@ -168,6 +165,42 @@ class Model extends \think\Model
         } else {
             return $this->delete();
         }
+    }
+
+    /**
+     * 更新数据
+     * 注：修复TP6.0.2开启全局查询时没有添加自动加上主键查询条件的问题
+     * @access public
+     * @param array  $data       数据数组
+     * @param mixed  $where      更新条件
+     * @param array  $allowField 允许字段
+     * @param string $suffix     数据表后缀
+     * @return static
+     */
+    public static function update(array $data, $where = [], array $allowField = [], string $suffix = '')
+    {
+        $model = new static($data);
+        $pk    = $model->getPk();
+        if (!isset($data[$pk]) || empty($data[$pk])) {
+            throw_error("$pk can not empty");
+        }
+        $model = $model->find($data[$pk]);
+        
+        if (!empty($allowField)) {
+            $model->allowField($allowField);
+        }
+
+        if (!empty($where)) {
+            $model->setUpdateWhere($where);
+        }
+
+        if (!empty($suffix)) {
+            $model->setSuffix($suffix);
+        }
+
+        $model->exists(true)->save($data);
+
+        return $model;
     }
 
     /**
@@ -191,6 +224,7 @@ class Model extends \think\Model
      */
     public function filter($input = [])
     {
+
         if (empty($input)) {
             return $this;
         }
@@ -209,7 +243,7 @@ class Model extends \think\Model
             $withQuery = false; // 是否关联查询
             $withModel = [];    // 已关联模型
             foreach ($input as $key => $value) {
-                // 参数过滤
+                // 参数过滤(过滤非主表字段)
                 if(stripos($key, '|') === false && stripos($key, '.') === false && !in_array($key, $tableFields)){
                     unset($input[$key]);
                 }
@@ -229,32 +263,40 @@ class Model extends \think\Model
                             $relation['this'][$orField]                   = $value;
                         }
                     }
-                    foreach ($relation as $model => $condition) {
-                        if($model === 'this'){
-                            if (is_null($query)) {
-                                $query = $this->parseFilter($this, $condition, $this->getName(), "OR");
-                            } else {
-                                $query = $this->parseFilter($query, $condition, $this->getName(), "OR");
-                            }
-                        }else{
-                            $relateTable = $this->$model()->getName();
-                            if (is_null($query)) {
-                                if(in_array($model, $withModel)){
-                                    $query = $this->parseFilter($this, $condition, $relateTable, 'OR');
-                                }else{
-                                    array_push($withModel, $model);
-                                    $query = $this->hasWhere($model, $this->parseFilter($this, $condition, $relateTable, 'OR'));
+                    $that = $this;
+                    if (is_null($query)) {
+                        $query = $this;
+                    }
+                    // 外加一层AND查询
+                    $query = $query->where(function ($query) use ($relation, $withModel, $that) {
+                        foreach ($relation as $model => $condition) {
+                            if($model === 'this'){
+                                if (is_null($query)) {
+                                    $query = $that->parseFilter($that, $condition, $that->getName(), "OR");
+                                } else {
+                                    $query = $that->parseFilter($query, $condition, $that->getName(), "OR");
                                 }
-                            } else {
-                                if(in_array($model, $withModel)){
-                                    $query = $this->parseFilter($query, $condition, $relateTable, 'OR');
-                                }else{
-                                    array_push($withModel, $model);
-                                    $query = $query->hasWhere($model, $this->parseFilter($query, $condition, $relateTable, 'OR'));
+                            }else{
+                                $relateTable = $that->$model()->getName();
+                                if (is_null($query)) {
+                                    if(in_array($model, $withModel)){
+                                        $query = $that->parseFilter($that, $condition, $relateTable, 'OR');
+                                    }else{
+                                        array_push($withModel, $model);
+                                        $query = $that->hasWhere($model, $that->parseFilter($that, $condition, $relateTable, 'OR'));
+                                    }
+                                } else {
+                                    if(in_array($model, $withModel)){
+                                        $query = $that->parseFilter($query, $condition, $relateTable, 'OR');
+                                    }else{
+                                        array_push($withModel, $model);
+                                        $query = $query->hasWhere($model, $that->parseFilter($query, $condition, $relateTable, 'OR'));
+                                    }
                                 }
                             }
                         }
-                    }
+                    });
+                    
                     unset($input[$key]);
                 }else if (stripos($key, '.') !== false) {
                     // 关联 AND 查询
@@ -279,15 +321,17 @@ class Model extends \think\Model
                     unset($input[$key]);
                 }
             }
+
             if($withQuery){
                 $query = $query->alias($this->getName());
             }
-            // 单表查询
+            // 主表查询
             if (is_null($query)) {
                 $query = $this->parseFilter($this, $input, $withQuery ? $this->getName() : '');
             } else {
                 $query = $this->parseFilter($query, $input, $withQuery ? $this->getName() : '');
             }
+
             return $query ?: $this;
         }
     }
@@ -307,12 +351,25 @@ class Model extends \think\Model
         if (!empty($table) && stripos($table, '.') === false) {
             $table .= '.';
         }
+   
         foreach ($condition as $key => $value) {
+            // 空字段过滤
             if (empty($value) && !is_numeric($value)) {
                 continue;
             }
+            // 进行关联查询时需指定|后面的表名
+            if(stripos($key, '|') !== false){
+                $keys = explode('|', $key);
+                for ($i=1; $i < count($keys); $i++) { 
+                    $keys[$i] = $table.$keys[$i];
+                }
+                $key = implode('|', $keys);
+            }
             if (is_array($value)) {
                 if (count($value) > 1 && in_array(strtolower($value[0]), $operator)) {
+                    if($value[0] == 'like' || $value[0] === 'not like'){
+                        $value[1] = stripos($value[1], '%') === false ? '%'.$value[1].'%' : $value[1];
+                    }
                     $query = $logic === 'AND' ? $query->where($table . $key, $value[0], $value[1]) : $query->whereOr($table . $key, $value[0], $value[1]);
                 } else {
                     $query = $logic === 'AND' ? $query->where($table . $key, 'in', $value) : $query->whereOr($table . $key, 'in', $value);
@@ -322,51 +379,5 @@ class Model extends \think\Model
             }
         }
         return $query;
-    }
-
-    /**
-     * 保存多个数据到当前数据对象
-     * ##修复ThinkPHP6.0.7 开启全局查询后saveAll无法自动识别新增或更新的问题##
-     * @access public
-     * @param iterable $dataSet 数据
-     * @param boolean  $replace 是否自动识别更新和写入
-     * @return Collection
-     * @throws \Exception
-     */
-    public function saveAll(iterable $dataSet, bool $replace = true): Collection
-    {
-        $db = $this->db();
-
-        $result = $db->transaction(function () use ($replace, $dataSet) {
-
-            $pk = $this->getPk();
-
-            if (is_string($pk) && $replace) {
-                $auto = true;
-            }
-
-            $result = [];
-
-            $suffix = $this->getSuffix();
-
-            foreach ($dataSet as $key => $data) {
-                if ($this->exists || (!empty($auto) && isset($data[$pk]))) {
-                    $model = self::where($pk, $data[$pk])->find();
-                    if (!empty($suffix)) {
-                        $model->setSuffix($suffix)->save($data);
-                        $result[$key] = $model;
-                    }else{
-                        $model->save($data);
-                        $result[$key] = $model;
-                    }
-                } else {
-                    $result[$key] = static::create($data, $this->field, $this->replace, $suffix);
-                }
-            }
-
-            return $result;
-        });
-
-        return $this->toCollection($result);
     }
 }

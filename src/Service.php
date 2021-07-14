@@ -166,7 +166,8 @@ abstract class Service
         if (!isset($input[$pk]) || empty($input[$pk])) {
             throw_error("$pk can not empty");
         }
-        if ($model->update(self::inputFilter($input))) {
+        $model = $model->find($input[$pk]);
+        if ($model->save(self::inputFilter($input))) {
             return $model;
         } else {
             throw_error('update fail');

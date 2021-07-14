@@ -46,6 +46,9 @@ class AuthService extends Service
             $temp['status']    = $item['ismenu']['status'] ?? true;
             $temp['params']    = $item['ismenu']['params'] ?? '';
             $temp['node']      = $item['node'];
+            $temp['is_super']  = $item['issuper'];
+            $temp['is_admin']  = $item['isadmin'];
+            $temp['is_open']   = $item['isopen'];
             $temp['parent']    = $item['ismenu']['parent'] ?? $item['parent'];
             $temp['path']      = '/' . str_replace('_', '/', $item['node']);
             $temp['is_menu']   = isset($item['ismenu']['is_menu']) ? (boolean)$item['ismenu']['is_menu']: (boolean) $item['ismenu'];
@@ -110,6 +113,12 @@ class AuthService extends Service
             $temp['pid'] = $pid;
             unset($temp['parent']);
             unset($temp['children']);
+            if(isset($temp['create_time'])){
+                unset($temp['create_time']);
+            }
+            if(isset($temp['update_time'])){
+                unset($temp['update_time']);
+            }
             if (isset($temp['id'])) {
                 $model = $this->model->find($temp['id']);
                 $model->where(['id' => $temp['id']])->save($temp);
