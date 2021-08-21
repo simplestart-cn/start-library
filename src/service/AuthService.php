@@ -37,6 +37,9 @@ class AuthService extends Service
         $nodes    = NodeService::instance()->getAll($app, true);
         $authNode = array();
         foreach ($nodes as $item) {
+            if($item['issuper'] || $item['isadmin'] || $item['islogin']){
+                continue;
+            }
             $temp              = array();
             $temp['app']       = empty($item['app']) ? $app : $item['app'];
             $temp['name']      = str_replace('/', '_', $item['node']);
@@ -48,11 +51,12 @@ class AuthService extends Service
             $temp['node']      = $item['node'];
             $temp['is_super']  = $item['issuper'];
             $temp['is_admin']  = $item['isadmin'];
+            $temp['is_auth']   = $item['isauth'];
             $temp['is_open']   = $item['isopen'];
             $temp['parent']    = $item['ismenu']['parent'] ?? $item['parent'];
             $temp['path']      = '/' . str_replace('_', '/', $item['node']);
             $temp['is_menu']   = isset($item['ismenu']['is_menu']) ? (boolean)$item['ismenu']['is_menu']: (boolean) $item['ismenu'];
-            $temp['template']  = isset($item['ismenu']['template']) ? $item['ismenu']['template'] : ((boolean) $item['isview'] ? str_replace('_', '/', $item['node']) : '');
+            $temp['view']  = isset($item['ismenu']['view']) ? $item['ismenu']['view'] : ((boolean) $item['isview'] ? str_replace('_', '/', $item['node']) : '');
             $temp['redirect']  = $item['ismenu']['redirect'] ?? '';
             $temp['hidden']    = false;
             $temp['no_cache']  = false;

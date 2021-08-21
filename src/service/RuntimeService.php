@@ -117,7 +117,6 @@ class RuntimeService extends Service
                         unset($uris[$kk]);
                     }
                 }
-
             }
             $this->app->config->set(['domain_bind' => array_merge($uris, $data['app_uri'])], 'app');
         }
@@ -134,7 +133,11 @@ class RuntimeService extends Service
     public function debug($data, $file = null, $new = false)
     {
         if (is_null($file)) {
-            $file = $this->app->getRootPath() . 'runtime' . DIRECTORY_SEPARATOR . 'debug' . DIRECTORY_SEPARATOR . date('Ymd') . '.log';
+            $path = $this->app->getRuntimePath() . 'debug';
+            if(!is_dir($path)){
+                mkdir($path, 0755, true);
+            }
+            $file = $path . DIRECTORY_SEPARATOR . date('Ymd') . '.log';
         }
         $str = (is_string($data) ? $data : ((is_array($data) || is_object($data)) ? print_r($data, true) : var_export($data, true))) . PHP_EOL;
         $new ? file_put_contents($file, $str) : file_put_contents($file, $str, FILE_APPEND);
