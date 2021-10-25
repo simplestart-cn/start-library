@@ -54,9 +54,9 @@ class AuthService extends Service
             $temp['is_admin']  = $item['isadmin'];
             $temp['is_auth']   = $item['isauth'];
             $temp['is_open']   = $item['isopen'];
+            $temp['is_menu']   = isset($menu['is_menu']) ? $menu['is_menu'] : (boolean)$menu;
             $temp['parent']    = $menu['parent'] ?? $item['parent'];
             $temp['path']      = '/' . str_replace('_', '/', $item['node']);
-            $temp['is_menu']   = isset($menu['is_menu']) ? $menu['is_menu'] : (boolean)$menu;
             $temp['view']      = isset($menu['view']) ? $menu['view'] : ($item['isview'] ? str_replace('_', '/', $item['node']) : '');
             $temp['redirect']  = $menu['redirect'] ?? '';
             $temp['hidden']    = 0;
