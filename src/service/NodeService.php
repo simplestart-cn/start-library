@@ -238,7 +238,7 @@ class NodeService extends Service
 
         $text = strtr($comment, "\n", ' ');
         $title = preg_replace('/^\/\*\s*\*\s*\*\s*(.*?)\s*\*.*?$/', '$1', $text);
-        foreach (['@auth', '@super', '@admin', '@login', '@menu', '@view', '@open'] as $find) if (stripos($title, $find) === 0) {
+        foreach (['@auth', '@super', '@admin', '@menu', '@view', '@open'] as $find) if (stripos($title, $find) === 0) {
             $title = $default;
         }
         $method =  [
@@ -257,6 +257,19 @@ class NodeService extends Service
             if(count($menu) > 1){
                 $menu = '{'.str_replace('=>',':',str_replace("'", '"', preg_replace("/\s/i", '', $menu[1]))).'}';
                 $method['ismenu'] = json_decode($menu, true);
+            }
+        }
+        // 匹配设置的view值
+        if($method['isview']){
+            preg_match('/@view\s(.*?)\s/i', $text, $view);
+            if(count($view) > 1){
+                if(!empty($view[1])){
+                    if(is_array($method['ismenu'])){
+                        $method['ismenu']['view'] = $view[1];
+                    }else{
+                        $method['ismenu'] = ['is_menu' => $method['ismenu'], 'view' => $view[1]];
+                    }
+                }
             }
         }
         return $method;

@@ -41,13 +41,13 @@ class Auth extends Command
     public function execute(Input $input, Output $output)
     {
         $app     = $input->getArgument('app');
-        $apps    = AppService::getApps();
         $service = AuthService::instance();
         if (!empty($app)) {
             $output->writeln("start building {$app}...");
             $res = $service->building($app);
             $output->writeln("{$app} complete.");
         } else {
+            $apps    = AppService::getApps();
             if(empty($apps)){
                 $output->writeln("app not found!");
                 return false;

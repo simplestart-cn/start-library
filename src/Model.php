@@ -14,6 +14,7 @@ namespace start;
 
 use think\Container;
 use think\facade\Cache;
+use think\db\BaseQuery as Query;
 
 /**
  * 自定义模型基类
@@ -23,32 +24,81 @@ use think\facade\Cache;
 class Model extends \think\Model
 {
     /**
-     * 是否Replace
-     * @var bool
-     */
-    private $replace = false;
-
-    /**
-     * 关联
+     * 关联对象
      * @var array
      */
     protected $with = [];
 
     /**
-     * 查询
+     * 查询条件
      * @var array
      */
     protected $where = [];
 
     /**
-     * 排序
+     * 默认排序
      */
-    protected $order = ['create_time desc'];
+    protected $order = ['id desc'];
 
     /**
-     * 只读
+     * 只读属性
      */
     protected $readonly = ['create_time','update_time'];
+
+
+    /**
+     * 数据库配置
+     * @var string
+     */
+    protected $connection;
+
+    /**
+     * 模型名称
+     * @var string
+     */
+    protected $name;
+
+    /**
+     * 主键值
+     * @var string
+     */
+    protected $key;
+
+    /**
+     * 数据表名称
+     * @var string
+     */
+    protected $table;
+
+    /**
+     * 数据表字段信息 留空则自动获取
+     * @var array
+     */
+    protected $schema = [];
+
+    /**
+     * JSON数据表字段
+     * @var array
+     */
+    protected $json = [];
+
+    /**
+     * JSON数据表字段类型
+     * @var array
+     */
+    protected $jsonType = [];
+
+    /**
+     * JSON数据取出是否需要转换为数组
+     * @var bool
+     */
+    protected $jsonAssoc = false;
+
+    /**
+     * 数据表后缀
+     * @var string
+     */
+    protected $suffix;
 
     /**
      * 架构函数
@@ -103,11 +153,11 @@ class Model extends \think\Model
      * @return    [type]                                  [description]
      */
     function list($filter = [], $order = [], $with = []) {
-        $order = is_array($order) ? $order : [$order];
+        $order = empty($order) ? $this->order : $order;
         return $this
             ->filter(array_merge($this->where, $filter))
             ->with(array_merge($this->with, $with))
-            ->order(array_merge($this->order, $order))
+            ->order($order)
             ->select();
     }
 
@@ -121,7 +171,7 @@ class Model extends \think\Model
      */
     public function page($filter = [], $order = [], $with = [], $paging = [])
     {
-        $order = is_array($order) ? $order : [$order];
+        $order = empty($order) ? $this->order : $order;
         if (!is_array($paging)) {
             $paging = ['page' => (int) $paging];
         }
@@ -134,7 +184,7 @@ class Model extends \think\Model
         return $this
             ->filter(array_merge($this->where, $filter))
             ->with(array_merge($this->with, $with))
-            ->order(array_merge($this->order, $order))
+            ->order($order)
             ->paginate($paging['per_page'], false, [
                 'query' => array_merge(\request()->request(), $paging),
             ]);
@@ -169,7 +219,7 @@ class Model extends \think\Model
 
     /**
      * 更新数据
-     * 注：修复TP6.0.2开启全局查询时没有添加自动加上主键查询条件的问题
+     * 注：修复TP6.0.2开启全局查询时,save方法无法自动识别：存在主键则进行更新的问题
      * @access public
      * @param array  $data       数据数组
      * @param mixed  $where      更新条件
@@ -204,6 +254,73 @@ class Model extends \think\Model
     }
 
     /**
+     * 关闭全局查询
+     * 修复tp6的全局查询问题
+     * @param array $scope
+     * @return this
+     */
+    public function withoutScope(array $scope = null)
+    {
+        if (is_array($scope)) {
+            $this->globalScope = array_diff($this->globalScope, $scope);
+        }else{
+            $this->globalScope = [];
+        }
+        return $this;
+    }
+
+    /**
+     * 获取当前模型的数据库查询对象
+     * @access public
+     * @param array $scope 设置不使用的全局查询范围
+     * @return Query
+     */
+    public function db($scope = []): Query
+    {
+        /** @var Query $query */
+        $query = parent::$db->connect($this->connection)
+            ->name($this->name . $this->suffix)
+            ->pk($this->pk);
+
+        if (!empty($this->table)) {
+            $query->table($this->table . $this->suffix);
+        }
+
+        $query->model($this)
+            ->json($this->json, $this->jsonAssoc)
+            ->setFieldType(array_merge($this->schema, $this->jsonType));
+
+        // 软删除
+        if (property_exists($this, 'withTrashed') && !$this->withTrashed) {
+            $this->withNoTrashed($query);
+        }
+        // 全局作用域(修复关联查询作用域问题,修复存在主键条件时依然使用全局查询的问题)
+        if (!empty($this->globalScope) && is_array($this->globalScope) && is_array($scope)) {
+            $globalScope = array_diff($this->globalScope, $scope);
+            $where = $this->getWhere();
+            $wherePk = false;
+            if(!empty($where) && is_array($where)){
+                foreach ($where as $item) {
+                    if(is_string($this->pk)){
+                        if(in_array($this->pk, $item)){
+                            $wherePk = true;
+                        }
+                    }else if(is_array($this->pk) && count($item) > 0){
+                        if(in_array($item[0], $this->pk)){
+                            $wherePk = true;
+                        }
+                    }
+                }
+            }
+            if(!$wherePk){
+                $query->scope($globalScope);
+            }
+        }
+        // 返回当前模型的数据库查询对象
+        return $query;
+    }
+
+    /**
      * 条件查询，支持操作符查询及关联表查询
      * @param  array  $input [description]
      * @return [type]         [description]
@@ -224,13 +341,18 @@ class Model extends \think\Model
      */
     public function filter($input = [])
     {
-
-        if (empty($input)) {
-            return $this;
+        $query     = $this;  // 查询对象(Query)
+        $withQuery = false;  // 是否关联查询
+        $withModel = [];     // 已关联模型
+        if(empty($this->globalScope)){
+            $static = new static();
+            $query =  $static->db(null);
         }
-
+        if (empty($input)) {
+            return $query;
+        }
         if (!is_array($input)) {
-            return $this->where($input);
+            return $query->where($input);
         } else if (count($input) > 0) {
             // 数据字典
             $table = $this->getTable();
@@ -239,9 +361,7 @@ class Model extends \think\Model
                 $tableFields = $this->getTableFields();
                 Cache::set($table.'_fields', $tableFields);
             }
-            $query     = null;  // 查询对象(Query)
-            $withQuery = false; // 是否关联查询
-            $withModel = [];    // 已关联模型
+            
             foreach ($input as $key => $value) {
                 // 参数过滤(过滤非主表字段)
                 if(stripos($key, '|') === false && stripos($key, '.') === false && !in_array($key, $tableFields)){
@@ -296,7 +416,6 @@ class Model extends \think\Model
                             }
                         }
                     });
-                    
                     unset($input[$key]);
                 }else if (stripos($key, '.') !== false) {
                     // 关联 AND 查询
@@ -331,7 +450,6 @@ class Model extends \think\Model
             } else {
                 $query = $this->parseFilter($query, $input, $withQuery ? $this->getName() : '');
             }
-
             return $query ?: $this;
         }
     }

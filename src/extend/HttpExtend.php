@@ -57,7 +57,7 @@ class HttpExtend
      */
     public static function submit($url, array $data = [], array $file = [], array $header = [], $method = 'POST', $returnHeader = true)
     {
-        list($boundary, $content) = self::buildFormData($data, $file);
+        list($boundary, $content) = self::buildForm($data, $file);
         $header[] = "Content-type:multipart/form-data;boundary={$boundary}";
         return self::request($method, $url, ['data' => $content, 'returnHeader' => $returnHeader, 'headers' => $header]);
     }
@@ -95,7 +95,7 @@ class HttpExtend
         if (strtolower($method) === 'head') {
             curl_setopt($curl, CURLOPT_NOBODY, 1);
         } elseif (isset($options['data'])) {
-            curl_setopt($curl, CURLOPT_POSTFIELDS, self::buildQueryData($options['data']));
+            curl_setopt($curl, CURLOPT_POSTFIELDS, self::buildQuery($options['data']));
         }
         // 请求超时设置
         if (isset($options['timeout']) && is_numeric($options['timeout'])) {

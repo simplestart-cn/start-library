@@ -84,4 +84,5 @@ class CodeExtend
         }
         return strtoupper($string);
     }
+    
 }

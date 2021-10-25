@@ -30,13 +30,13 @@ abstract class Service
 
     /**
      * 服务名称
-     * @var [type]
+     * @var string
      */
     protected $name;
 
     /**
      * 服务模型
-     * @var [type]
+     * @var string
      */
     public $model;
 
@@ -92,7 +92,6 @@ abstract class Service
 
     /**
      * 获取模型
-     * @param  [type] $name 模型名称
      * @return [type]       [description]
      */
     public static function model()
@@ -102,6 +101,20 @@ abstract class Service
             throw_error("Model does not exist.");
         }
         return new $model;
+    }
+
+    /**
+     * 获取模型
+     * @param  [type] $name 全局查询模型
+     * @return [type]       [description]
+     */
+    public static function withoutScope(array $scope = null)
+    {
+        $model = self::instance()->model;
+         if (!is_object($model)) {
+            throw_error("Model does not exist.");
+        }
+        return (new $model)->withoutScope($scope);
     }
 
     /**

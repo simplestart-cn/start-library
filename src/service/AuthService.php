@@ -37,25 +37,30 @@ class AuthService extends Service
         $nodes    = NodeService::instance()->getAll($app, true);
         $authNode = array();
         foreach ($nodes as $item) {
+            if($item['issuper'] || $item['isadmin'] || $item['islogin']){
+                continue;
+            }
+            $menu              = $item['ismenu'];
             $temp              = array();
             $temp['app']       = empty($item['app']) ? $app : $item['app'];
             $temp['name']      = str_replace('/', '_', $item['node']);
-            $temp['icon']      = $item['ismenu']['icon'] ?? '';
-            $temp['sort']      = $item['ismenu']['sort'] ?? 100;
-            $temp['title']     = $item['ismenu']['title'] ?? $item['title'];
-            $temp['status']    = $item['ismenu']['status'] ?? true;
-            $temp['params']    = $item['ismenu']['params'] ?? '';
+            $temp['icon']      = $menu['icon'] ?? '';
+            $temp['sort']      = $menu['sort'] ?? 100;
+            $temp['title']     = $menu['title'] ?? $item['title'];
+            $temp['status']    = $menu['status'] ?? 1;
+            $temp['params']    = $menu['params'] ?? '';
             $temp['node']      = $item['node'];
             $temp['is_super']  = $item['issuper'];
             $temp['is_admin']  = $item['isadmin'];
+            $temp['is_auth']   = $item['isauth'];
             $temp['is_open']   = $item['isopen'];
-            $temp['parent']    = $item['ismenu']['parent'] ?? $item['parent'];
+            $temp['parent']    = $menu['parent'] ?? $item['parent'];
             $temp['path']      = '/' . str_replace('_', '/', $item['node']);
-            $temp['is_menu']   = isset($item['ismenu']['is_menu']) ? (boolean)$item['ismenu']['is_menu']: (boolean) $item['ismenu'];
-            $temp['template']  = isset($item['ismenu']['template']) ? $item['ismenu']['template'] : ((boolean) $item['isview'] ? str_replace('_', '/', $item['node']) : '');
-            $temp['redirect']  = $item['ismenu']['redirect'] ?? '';
-            $temp['hidden']    = false;
-            $temp['no_cache']  = false;
+            $temp['is_menu']   = isset($menu['is_menu']) ? $menu['is_menu'] : (boolean)$menu;
+            $temp['view']      = isset($menu['view']) ? $menu['view'] : ($item['isview'] ? str_replace('_', '/', $item['node']) : '');
+            $temp['redirect']  = $menu['redirect'] ?? '';
+            $temp['hidden']    = 0;
+            $temp['no_cache']  = 0;
             $authNode[$item['node']] = $temp;
         }
         // 拓展权限
@@ -70,7 +75,7 @@ class AuthService extends Service
             }
         }
         // 权限权限
-        $dbNodes   = $this->model->select()->toArray();
+        $dbNodes   = $this->model->select()->hidden(['create_time','update_time'])->toArray();
         $dbNodes   = array_combine(array_column($dbNodes, 'node'), array_values($dbNodes));
         $dbKeys  = array_combine(array_column($dbNodes, 'id'), array_values($dbNodes));
         foreach ($authNode as &$menu) {
@@ -84,8 +89,6 @@ class AuthService extends Service
                 if(!isset($authNode[$parent['node']])){
                     if($parent['pid'] && isset($dbKeys[$parent['pid']])){
                         $parent['parent'] = $dbKeys[$parent['pid']]['node'];
-                        unset($parent['create_time']);
-                        unset($parent['update_time']);
                     }
                     $authNode[$parent['node']] = $parent;
                 }
