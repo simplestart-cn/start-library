@@ -141,7 +141,7 @@ class NodeService extends Service
                 'isadmin' => $method['isadmin'],
                 'islogin' => $method['islogin'],
                 'ismenu' => (boolean)$method['ismenu'],
-                'isview' => $method['isview'],
+                'isview' => 0,
                 'isopen' => $method['isopen']
             ];
         }
