@@ -24,23 +24,7 @@ use think\db\BaseQuery as Query;
 class Model extends \think\Model
 {
     /**
-<<<<<<< HEAD
      * 关联对象
-=======
-     * 使用全局查询
-     *
-     * @var boolean
-     */
-    public $useScope = true;
-    /**
-     * 是否Replace
-     * @var bool
-     */
-    private $replace = false;
-
-    /**
-     * 关联
->>>>>>> 8d1141bd3d3a566bc2a1d90a4ee3bb88e6ca34ae
      * @var array
      */
     protected $with = [];
