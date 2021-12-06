@@ -225,37 +225,73 @@ class App
      */
     protected function loadApp(string $appName, string $appPath): void
     {
+        $rootPath = $this->app->getRootPath();
+        $basePath = $this->app->getBasePath();
+        // 加载核心
         if($appName !== 'core'){
-            if (is_file($this->app->getRootPath() . 'core' . DIRECTORY_SEPARATOR . 'common.php')) {
-                include_once $this->app->getRootPath() . 'core' . DIRECTORY_SEPARATOR  . 'common.php';
+            if (is_file($rootPath . 'core' . DIRECTORY_SEPARATOR . 'common.php')) {
+                include_once $rootPath . 'core' . DIRECTORY_SEPARATOR  . 'common.php';
             }
-            if (is_file($this->app->getRootPath() . 'core' . DIRECTORY_SEPARATOR . 'middleware.php')) {
-                $this->app->middleware->import(include $this->app->getRootPath() . 'core' . DIRECTORY_SEPARATOR . 'middleware.php', 'app');
+            if (is_file($rootPath . 'core' . DIRECTORY_SEPARATOR . 'middleware.php')) {
+                $this->app->middleware->import(include $rootPath . 'core' . DIRECTORY_SEPARATOR . 'middleware.php', 'app');
             }
         }
 
+        // 加载函数
         if (is_file($appPath . 'common.php')) {
             include_once $appPath . 'common.php';
         }
 
+        // 加载配置
         $files = [];
-
         $files = array_merge($files, glob($appPath . 'config' . DIRECTORY_SEPARATOR . '*' . $this->app->getConfigExt()));
-
         foreach ($files as $file) {
             $this->app->config->load($file, pathinfo($file, PATHINFO_FILENAME));
         }
 
-        if (is_file($appPath . 'event.php')) {
-            $this->app->loadEvent(include $appPath . 'event.php');
+        // 加载事件
+        $apps = $this->app->cache->get('apps', []);
+        if(empty($apps)){
+            $apps = AppService::getApps();
+            $this->app->cache->set('apps', $apps);
+        }
+        if (is_file($rootPath . 'core' . DIRECTORY_SEPARATOR . 'event.php')) {
+            $this->loadEvent(include $rootPath . 'core' . DIRECTORY_SEPARATOR  . 'event.php');
+        }
+        foreach ($apps as $_app) {
+            if (is_file($basePath . $_app . DIRECTORY_SEPARATOR . 'event.php')) {
+                $this->loadEvent(include $basePath . $_app . DIRECTORY_SEPARATOR . 'event.php');
+            }
         }
 
+        // 加载中间件
         if (is_file($appPath . 'middleware.php')) {
             $this->app->middleware->import(include $appPath . 'middleware.php', 'app');
         }
 
         // 加载应用默认语言包
         $this->app->loadLangPack($this->app->lang->defaultLangSet());
+    }
+
+    /**
+     * 注册应用事件
+     * @access protected
+     * @param array $event 事件数据
+     * @return void
+     */
+    public function loadEvent(array $event): void
+    {
+        if (isset($event['bind'])) {
+            $this->app->event->bind($event['bind']);
+        }
+
+        if (isset($event['listen'])) {
+            $this->app->event->listenEvents($event['listen']);
+        }
+
+        if (isset($event['subscribe'])) {
+            $this->app->event->subscribe($event['subscribe']);
+        }
     }
 
 }
