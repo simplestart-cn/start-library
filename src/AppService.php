@@ -77,7 +77,7 @@ class AppService extends Service
      * @param  array  $order  [description]
      * @return [type]         [description]
      */
-    public static function getPage($filter = [], $order = [])
+    public static function getPage($filter = [], $order = [], $with = null)
     {
         $origin     = array();
         $installed  = self::getInstalled();

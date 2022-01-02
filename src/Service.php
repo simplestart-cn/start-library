@@ -97,7 +97,7 @@ abstract class Service
     public static function model()
     {
         $model = self::instance()->model;
-         if (!is_object($model)) {
+        if (!is_object($model)) {
             throw_error("Model does not exist.");
         }
         return new $model;
@@ -111,7 +111,7 @@ abstract class Service
     public static function withoutScope(array $scope = null)
     {
         $model = self::instance()->model;
-         if (!is_object($model)) {
+        if (!is_object($model)) {
             throw_error("Model does not exist.");
         }
         return (new $model)->withoutScope($scope);
@@ -123,10 +123,10 @@ abstract class Service
      * @param  array  $order [description]
      * @return [type]         [description]
      */
-    public static function getList($filter = [], $order = [])
+    public static function getList($filter = [], $order = [], $with = null)
     {
         $model = self::model();
-        return $model->list($filter, $order);
+        return $model->list($filter, $order, $with);
     }
 
     /**
@@ -135,10 +135,10 @@ abstract class Service
      * @param  array  $order [description]
      * @return [type]         [description]
      */
-    public static function getPage($filter = [], $order = [])
+    public static function getPage($filter = [], $order = [], $with = null)
     {
         $model = self::model();
-        return $model->page($filter, $order);
+        return $model->page($filter, $order, $with);
     }
 
     /**
@@ -146,7 +146,7 @@ abstract class Service
      * @param  array  $filter [description]
      * @return [type]         [description]
      */
-    public static function getInfo($filter, $with = [])
+    public static function getInfo($filter, $with = null)
     {
         $model = self::model();
         return $model->info($filter, $with);
@@ -251,5 +251,4 @@ abstract class Service
     {
         \think\facade\Db::rollback();
     }
-
 }

@@ -237,19 +237,19 @@ class App
             }
         }
 
-        // 加载函数
+        // 加载应用函数
         if (is_file($appPath . 'common.php')) {
             include_once $appPath . 'common.php';
         }
 
-        // 加载配置
+        // 加载应用配置
         $files = [];
         $files = array_merge($files, glob($appPath . 'config' . DIRECTORY_SEPARATOR . '*' . $this->app->getConfigExt()));
         foreach ($files as $file) {
             $this->app->config->load($file, pathinfo($file, PATHINFO_FILENAME));
         }
 
-        // 加载事件
+        // 加载应用事件
         $apps = $this->app->cache->get('apps', []);
         if(empty($apps)){
             $apps = AppService::getApps();
@@ -264,7 +264,7 @@ class App
             }
         }
 
-        // 加载中间件
+        // 加载应用中间件
         if (is_file($appPath . 'middleware.php')) {
             $this->app->middleware->import(include $appPath . 'middleware.php', 'app');
         }

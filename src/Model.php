@@ -24,26 +24,38 @@ use think\db\BaseQuery as Query;
 class Model extends \think\Model
 {
     /**
-     * 关联对象
+     * 使用全局查询
+     *
+     * @var boolean
+     */
+    public $useScope = true;
+    /**
+     * 是否Replace
+     * @var bool
+     */
+    private $replace = false;
+
+    /**
+     * 关联
      * @var array
      */
     protected $with = [];
 
     /**
-     * 查询条件
+     * 查询
      * @var array
      */
     protected $where = [];
 
     /**
-     * 默认排序
+     * 排序
      */
     protected $order = ['id desc'];
 
     /**
-     * 只读属性
+     * 只读
      */
-    protected $readonly = ['create_time','update_time'];
+    protected $readonly = ['create_time', 'update_time'];
 
 
     /**
@@ -109,8 +121,8 @@ class Model extends \think\Model
     {
         parent::__construct($data);
         // 固定name属性为模型名(解决TP关联查询alias别名问题)
-        if(!empty($this->name)){
-            if(empty($this->table)){
+        if (!empty($this->name)) {
+            if (empty($this->table)) {
                 $this->table = $this->name;
             }
             $name       = str_replace('\\', '/', static::class);
@@ -125,7 +137,7 @@ class Model extends \think\Model
     {
         self::instance()->initialize();
     }
-    
+
     /**
      * 初始化服务
      * @return $this
@@ -152,11 +164,14 @@ class Model extends \think\Model
      * @param     array                         $with    [description]
      * @return    [type]                                  [description]
      */
-    function list($filter = [], $order = [], $with = []) {
-        $order = empty($order) ? $this->order : $order;
+    function list($filter = [], $order = [], $with = null)
+    {
+        $with  = is_array($with) ? $with : $this->with;
+        $order = !empty($order) ? $order : $this->order;
+        $where = is_array($filter) ? array_merge($this->where, $filter) : $filter;
         return $this
-            ->filter(array_merge($this->where, $filter))
-            ->with(array_merge($this->with, $with))
+            ->filter($where)
+            ->with($with)
             ->order($order)
             ->select();
     }
@@ -169,9 +184,11 @@ class Model extends \think\Model
      * @param     array                         $paging   [description]
      * @return    [type]                                  [description]
      */
-    public function page($filter = [], $order = [], $with = [], $paging = [])
+    public function page($filter = [], $order = [], $with = null, $paging = [])
     {
-        $order = empty($order) ? $this->order : $order;
+        $with  = is_array($with) ? $with : $this->with;
+        $order = !empty($order) ? $order : $this->order;
+        $where = is_array($filter) ? array_merge($this->where, $filter) : $filter;
         if (!is_array($paging)) {
             $paging = ['page' => (int) $paging];
         }
@@ -179,15 +196,13 @@ class Model extends \think\Model
             $paging['page'] = input('page', 1, 'trim');
         }
         if (!isset($paging['per_page'])) {
-            $paging['per_page'] = input('per_page', 30, 'trim');
+            $paging['list_rows'] = input('per_page', 30, 'trim');
         }
         return $this
-            ->filter(array_merge($this->where, $filter))
-            ->with(array_merge($this->with, $with))
+            ->filter($where)
+            ->with($with)
             ->order($order)
-            ->paginate($paging['per_page'], false, [
-                'query' => array_merge(\request()->request(), $paging),
-            ]);
+            ->paginate($paging, false);
     }
 
     /**
@@ -196,12 +211,14 @@ class Model extends \think\Model
      * @param     array                         $with     [description]
      * @return    [type]                                  [description]
      */
-    public function info($filter, $with = [])
+    public function info($filter, $with = null)
     {
+        $with  = is_array($with) ? $with : $this->with;
+        $where = is_array($filter) ? array_merge($this->where, $filter) : $filter;
         if (!is_array($filter)) {
-            return $this->with(array_merge($this->with, $with))->find($filter);
+            return $this->with($with)->find($filter);
         } else {
-            return $this->filter(array_merge($this->where, $filter))->with(array_merge($this->with, $with))->find();
+            return $this->filter($where)->with($with)->find();
         }
     }
 
@@ -219,7 +236,7 @@ class Model extends \think\Model
 
     /**
      * 更新数据
-     * 注：修复TP6.0.2开启全局查询时,save方法无法自动识别：存在主键则进行更新的问题
+     * 注：修复TP6.0.2开启全局查询时没有添加自动加上主键查询条件的问题
      * @access public
      * @param array  $data       数据数组
      * @param mixed  $where      更新条件
@@ -234,28 +251,32 @@ class Model extends \think\Model
         if (!isset($data[$pk]) || empty($data[$pk])) {
             throw_error("$pk can not empty");
         }
-        $model = $model->find($data[$pk]);
-        
+        $result = $model->find($data[$pk]);
+        if (empty($result)) {
+            throw_error($model->name . ' not found');
+        }
+
         if (!empty($allowField)) {
-            $model->allowField($allowField);
+            $result->allowField($allowField);
         }
 
         if (!empty($where)) {
-            $model->setUpdateWhere($where);
+            $result->setUpdateWhere($where);
         }
 
         if (!empty($suffix)) {
-            $model->setSuffix($suffix);
+            $result->setSuffix($suffix);
         }
 
-        $model->exists(true)->save($data);
+        $result->exists(true)->save($data);
 
-        return $model;
+        return $result;
     }
 
     /**
      * 关闭全局查询
-     * 修复tp6的全局查询问题
+     * 修复tp6的大问题
+     *
      * @param array $scope
      * @return this
      */
@@ -263,8 +284,9 @@ class Model extends \think\Model
     {
         if (is_array($scope)) {
             $this->globalScope = array_diff($this->globalScope, $scope);
-        }else{
-            $this->globalScope = [];
+        }
+        if (empty($this->globalScope) || $scope == null) {
+            $this->useScope = false;
         }
         return $this;
     }
@@ -295,27 +317,28 @@ class Model extends \think\Model
             $this->withNoTrashed($query);
         }
         // 全局作用域(修复关联查询作用域问题,修复存在主键条件时依然使用全局查询的问题)
-        if (!empty($this->globalScope) && is_array($this->globalScope) && is_array($scope)) {
+        if ($this->useScope && is_array($this->globalScope) && is_array($scope)) {
             $globalScope = array_diff($this->globalScope, $scope);
             $where = $this->getWhere();
             $wherePk = false;
-            if(!empty($where) && is_array($where)){
+            if (!empty($where) && is_array($where)) {
                 foreach ($where as $item) {
-                    if(is_string($this->pk)){
-                        if(in_array($this->pk, $item)){
+                    if (is_string($this->pk)) {
+                        if (in_array($this->pk, $item)) {
                             $wherePk = true;
                         }
-                    }else if(is_array($this->pk) && count($item) > 0){
-                        if(in_array($item[0], $this->pk)){
+                    } else if (is_array($this->pk) && count($item) > 0) {
+                        if (in_array($item[0], $this->pk)) {
                             $wherePk = true;
                         }
                     }
                 }
             }
-            if(!$wherePk){
+            if (!$wherePk) {
                 $query->scope($globalScope);
             }
         }
+
         // 返回当前模型的数据库查询对象
         return $query;
     }
@@ -341,11 +364,15 @@ class Model extends \think\Model
      */
     public function filter($input = [])
     {
-        $query     = $this;  // 查询对象(Query)
-        $withQuery = false;  // 是否关联查询
-        $withModel = [];     // 已关联模型
-        if(empty($this->globalScope)){
+        $query = $this;  // 查询对象(Query)
+        $filter = [];
+        $hasModel = [];     // 已关联模型
+        $hasWhere = false;  // 是否关联查询
+        $hasWhereOr = [];   // 关联OR查询
+        $hasWhereAnd = [];  // 关联AND查询
+        if (!$this->useScope) {
             $static = new static();
+            $static->useScope = false;
             $query =  $static->db(null);
         }
         if (empty($input)) {
@@ -356,98 +383,91 @@ class Model extends \think\Model
         } else if (count($input) > 0) {
             // 数据字典
             $table = $this->getTable();
-            $tableFields = Cache::get($table.'_fields');
-            if(empty($tableFields) || env('APP_DEBUG')){
+            $tableFields = Cache::get($table . '_fields');
+            if (empty($tableFields) || env('APP_DEBUG')) {
                 $tableFields = $this->getTableFields();
-                Cache::set($table.'_fields', $tableFields);
+                Cache::set($table . '_fields', $tableFields);
             }
+            // 分割查询
             foreach ($input as $key => $value) {
-                // 参数过滤(过滤非主表字段)
-                if(stripos($key, '|') === false && stripos($key, '.') === false && !in_array($key, $tableFields)){
-                    unset($input[$key]);
+                // 过滤空字段
+                if($value === '' || $value === null){
+                    continue;
+                }
+                // 过滤非表字段
+                if (!in_array($key, $tableFields) && stripos($key, '|') === false && stripos($key, '.') === false) {
+                    continue;
                 }
                 // 关联查询
-                if(stripos($key, '|') !== false && stripos($key, '.') !== false) {
-                    // 关联 OR 查询
-                    $withQuery = true;
-                    $orQuery = explode('|', $key);
-                    $relation = array();
-                    foreach ($orQuery as $orField) {
+                if (stripos($key, '|') !== false && stripos($key, '.') !== false) {
+                    $orFields = explode('|', $key);
+                    $orCondition = array();
+                    foreach ($orFields as $orField) {
                         if (stripos($orField, '.') !== false) {
                             list($model, $field) = explode('.', $orField);
-                            !isset($relation[$model]) ? $relation[$model] = [] : '';
-                            $relation[$model][$field]                     = $value;
-                        }else{
-                            !isset($relation['this']) ? $relation['this'] = [] : '';
-                            $relation['this'][$orField]                   = $value;
-                        }
-                    }
-                    $that = $this;
-                    if (is_null($query)) {
-                        $query = $this;
-                    }
-                    // 外加一层AND查询
-                    $query = $query->where(function ($query) use ($relation, $withModel, $that) {
-                        foreach ($relation as $model => $condition) {
-                            if($model === 'this'){
-                                if (is_null($query)) {
-                                    $query = $that->parseFilter($that, $condition, $that->getName(), "OR");
-                                } else {
-                                    $query = $that->parseFilter($query, $condition, $that->getName(), "OR");
-                                }
-                            }else{
-                                $relateTable = $that->$model()->getName();
-                                if (is_null($query)) {
-                                    if(in_array($model, $withModel)){
-                                        $query = $that->parseFilter($that, $condition, $relateTable, 'OR');
-                                    }else{
-                                        array_push($withModel, $model);
-                                        $query = $that->hasWhere($model, $that->parseFilter($that, $condition, $relateTable, 'OR'));
-                                    }
-                                } else {
-                                    if(in_array($model, $withModel)){
-                                        $query = $that->parseFilter($query, $condition, $relateTable, 'OR');
-                                    }else{
-                                        array_push($withModel, $model);
-                                        $query = $query->hasWhere($model, $that->parseFilter($query, $condition, $relateTable, 'OR'));
-                                    }
-                                }
+                            !isset($orCondition[$model]) ? $orCondition[$model] = [] : '';
+                            $orCondition[$model][$field] = $value;
+                            if (!in_array($model, $hasModel)) {
+                                $query = $query->hasWhere($model, []);
+                                array_push($hasModel, $model);
                             }
-                        }
-                    });
-                    unset($input[$key]);
-                }else if (stripos($key, '.') !== false) {
-                    // 关联 AND 查询
-                    $withQuery = true;
-                    list($model, $field) = explode('.', $key);
-                    $relateTable = $this->$model()->getName();
-                    if (is_null($query)) {
-                        if(in_array($model, $withModel)){
-                            $this->parseFilter($this, [$field => $value], $relateTable);
-                        }else{
-                            array_push($withModel, $model);
-                            $query = $this->hasWhere($model, $this->parseFilter($this, [$field => $value], $relateTable));
-                        }
-                    } else {
-                        if(in_array($model, $withModel)){
-                            $this->parseFilter($query, [$field => $value], $relateTable);
-                        }else{
-                            array_push($withModel, $model);
-                            $query = $query->hasWhere($model, $this->parseFilter($query, [$field => $value], $relateTable));
+                        } else {
+                            !isset($orCondition['this']) ? $orCondition['this'] = [] : '';
+                            $orCondition['this'][$orField]  = $value;
                         }
                     }
-                    unset($input[$key]);
+                    $hasWhereOr[] = $orCondition;
+                    continue;
+                } else if (stripos($key, '.') !== false) {
+                    list($model, $field) = explode('.', $key);
+                    !isset($hasWhereAnd[$model]) ? $hasWhereAnd[$model] = [] : '';
+                    $hasWhereAnd[$model][$field] = $value;
+                    continue;
+                }
+                $filter[$key] = $value;
+            }
+            // 关联AND查询
+            if (!empty($hasWhereAnd)) {
+                $hasWhere = true;
+                foreach ($hasWhereAnd as $model => $condition) {
+                    $relateTable = $this->$model()->getName();
+                    if (in_array($model, $hasModel)) {
+                        $query = $this->parseFilter($query, $condition, $relateTable);
+                    } else {
+                        array_push($hasModel, $model);
+                        $query = $query->hasWhere($model, $this->parseFilter($query, $condition, $relateTable));
+                    }
                 }
             }
-
-            if($withQuery){
+            
+            // 关联OR查询
+            if (!empty($hasWhereOr)) {
+                $that = $this;
+                $hasWhere = true;
+                foreach ($hasWhereOr as $relation) {
+                    $query = $query->where(function ($query) use ($that, $relation) {
+                        foreach ($relation as $model => $condition) {
+                            $query = $query->whereOr(function ($query) use ($that, $model, $condition) {
+                                if ($model === 'this') {
+                                    $query = $that->parseFilter($query, $condition, $that->getName(), "OR");
+                                } else {
+                                    $relateTable = $that->$model()->getName();
+                                    $query = $that->parseFilter($query, $condition, $relateTable, 'OR');
+                                }
+                            });
+                        }
+                    });
+                }
+            }
+            // 设置别名
+            if ($hasWhere) {
                 $query = $query->alias($this->getName());
             }
             // 主表查询
             if (is_null($query)) {
-                $query = $this->parseFilter($this, $input, $withQuery ? $this->getName() : '');
+                $query = $this->parseFilter($this, $filter, $hasWhere ? $this->getName() : '');
             } else {
-                $query = $this->parseFilter($query, $input, $withQuery ? $this->getName() : '');
+                $query = $this->parseFilter($query, $filter, $hasWhere ? $this->getName() : '');
             }
             return $query ?: $this;
         }
@@ -463,29 +483,29 @@ class Model extends \think\Model
      */
     private function parseFilter($query, array $condition = [], $table = '', $logic = 'AND')
     {
-        
+
         $operator = ['=', '<>', '>', '>=', '<', '<=', 'like', 'not like', 'in', 'not in', 'between', 'not between', 'null', 'not null', 'exists', 'not exists', 'regexp', 'not regexp'];
         if (!empty($table) && stripos($table, '.') === false) {
             $table .= '.';
         }
-   
+
         foreach ($condition as $key => $value) {
             // 空字段过滤
             if (empty($value) && !is_numeric($value)) {
                 continue;
             }
             // 进行关联查询时需指定|后面的表名
-            if(stripos($key, '|') !== false){
+            if (stripos($key, '|') !== false) {
                 $keys = explode('|', $key);
-                for ($i=1; $i < count($keys); $i++) { 
-                    $keys[$i] = $table.$keys[$i];
+                for ($i = 1; $i < count($keys); $i++) {
+                    $keys[$i] = $table . $keys[$i];
                 }
                 $key = implode('|', $keys);
             }
             if (is_array($value)) {
                 if (count($value) > 1 && in_array(strtolower($value[0]), $operator)) {
-                    if($value[0] == 'like' || $value[0] === 'not like'){
-                        $value[1] = stripos($value[1], '%') === false ? '%'.$value[1].'%' : $value[1];
+                    if ($value[0] == 'like' || $value[0] === 'not like') {
+                        $value[1] = stripos($value[1], '%') === false ? '%' . $value[1] . '%' : $value[1];
                     }
                     $query = $logic === 'AND' ? $query->where($table . $key, $value[0], $value[1]) : $query->whereOr($table . $key, $value[0], $value[1]);
                 } else {
