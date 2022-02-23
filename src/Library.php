@@ -41,12 +41,15 @@ class Library extends Service
         });
                 // 注册系统任务指令
         $this->commands([
-            'start\command\Build',
-            'start\command\Clear',
             'start\command\Auth',
+            'start\command\Clear',
             'start\command\Install',
             'start\command\Version',
             'start\command\Database',
+            'start\command\build\App',
+            'start\command\build\Model',
+            'start\command\build\Service',
+            'start\command\build\Controller'
         ]);
 
         // 绑定插件路由
