@@ -14,8 +14,8 @@ namespace start\command\build;
 
 use start\command\Build;
 use think\console\Input;
-use think\console\input\Argument;
 use think\console\Output;
+use think\console\input\Option;
 
 class App extends Build
 {
@@ -39,26 +39,31 @@ class App extends Build
     {
         parent::configure();
         $this->setName('build:app')
-            ->addArgument('app', Argument::OPTIONAL, 'app name .')
+            ->addOption('apidoc', null, Option::VALUE_NONE, 'Generate apidoc config.')
+            ->addOption('common', null, Option::VALUE_NONE, 'Generate common class.')
             ->setDescription('Build App Dirs');
     }
 
     protected function execute(Input $input, Output $output)
     {
+        $name            = $input->getArgument('name') ?: '';
+        $configPath     = $this->app->getConfigPath();
         $this->basePath = $this->app->getBasePath();
-        $app            = $input->getArgument('app') ?: '';
 
-        if (is_file($this->basePath . 'build.php')) {
-            $list = include $this->basePath . 'build.php';
+        if (empty($name)) {
+            $output->writeln("<error>Name can not empty</error>");
+            die;
+        }
+        if (is_file($configPath . 'build.php')) {
+            $list = include $configPath . 'build.php';
         } else {
             $list = [
                 '__dir__' => ['controller', 'model', 'service'],
             ];
         }
 
-        $this->buildApp($app, $list);
+        $this->buildApp($name, $list);
         $output->writeln("<info>Successed</info>");
-
     }
 
     /**
@@ -70,18 +75,34 @@ class App extends Build
      */
     protected function buildApp(string $app, array $list = []): void
     {
-        if (!is_dir($this->basePath . $app)) {
-            // 创建应用目录
-            mkdir($this->basePath . $app);
-        }
-
         $appPath   = $this->basePath . ($app ? $app . DIRECTORY_SEPARATOR : '');
         $namespace = 'app' . ($app ? '\\' . $app : '');
 
-        // 创建配置文件和公共文件
-        $this->buildCommon($app);
+        // 创建应用目录
+        if (!is_dir($this->basePath . $app)) {
+            
+            mkdir($this->basePath . $app);
+        }
+
+        // 创建应用配置
+        $stub = file_get_contents(__DIR__ . DIRECTORY_SEPARATOR . 'stubs' . DIRECTORY_SEPARATOR . 'app.json.stub');
+        $appjson = $this->basePath . ($app ? $app . DIRECTORY_SEPARATOR : '') . 'app.json';
+        $content = str_replace(['{%appName%}',  '{%namespace%}'], [$app,$namespace], $stub);
+        file_put_contents($appjson, $content);
+
         // 创建模块的默认页面
         $this->buildHello($app, $namespace);
+
+        // 创建配置文件和公共文件
+        if ($this->input->getOption('common')) {
+            $this->buildCommon($app);
+        }
+
+        // 创建接口文档配置文件
+        if ($this->input->getOption('apidoc')) {
+            $this->buildApidoc($app);
+        }
+        
 
         foreach ($list as $path => $file) {
             if ('__dir__' == $path) {
@@ -109,13 +130,20 @@ class App extends Build
                                 $filename = $appPath . $path . DIRECTORY_SEPARATOR . $val . 'Controller.php';
                                 $class    = $val . 'Controller';
                             }
-                            $content = "<?php" . PHP_EOL . "namespace {$space};" . PHP_EOL . PHP_EOL . "class {$class}" . PHP_EOL . "{" . PHP_EOL . PHP_EOL . "}";
+                            $stub = file_get_contents(__DIR__ . DIRECTORY_SEPARATOR . 'stubs' . DIRECTORY_SEPARATOR . 'controller.stub');
+                            $content = $this->stub_replace($stub, $class, $space);
+                            break;
+                        case 'service': // 服务
+                            $stub = file_get_contents(__DIR__ . DIRECTORY_SEPARATOR . 'stubs' . DIRECTORY_SEPARATOR . 'service.stub');
+                            $content = $this->stub_replace($stub, $class, $space);
                             break;
                         case 'model': // 模型
-                            $content = "<?php" . PHP_EOL . "namespace {$space};" . PHP_EOL . PHP_EOL . "use think\Model;" . PHP_EOL . PHP_EOL . "class {$class} extends Model" . PHP_EOL . "{" . PHP_EOL . PHP_EOL . "}";
+                            $stub = file_get_contents(__DIR__ . DIRECTORY_SEPARATOR . 'stubs' . DIRECTORY_SEPARATOR . 'model.stub');
+                            $content = $this->stub_replace($stub, $class, $space);
                             break;
                         case 'view': // 视图
-                            $filename = $appPath . $path . DIRECTORY_SEPARATOR . $val . '.html';
+                            $sufixx = $this->app->config->get('view.view_suffix');
+                            $filename = $appPath . $path . DIRECTORY_SEPARATOR . $val . $sufixx;
                             $this->checkDirBuild(dirname($filename));
                             $content = '';
                             break;
@@ -145,10 +173,9 @@ class App extends Build
         $filename = $this->basePath . ($app ? $app . DIRECTORY_SEPARATOR : '') . 'controller' . DIRECTORY_SEPARATOR . 'Index' . $suffix . '.php';
 
         if (!is_file($filename)) {
-            $content = file_get_contents(__DIR__ . DIRECTORY_SEPARATOR . 'stubs' . DIRECTORY_SEPARATOR . 'controller.stub');
-            $content = str_replace(['{%name%}', '{%app%}', '{%layer%}', '{%suffix%}'], [$app, $namespace, 'controller', $suffix], $content);
+            $stub = file_get_contents(__DIR__ . DIRECTORY_SEPARATOR . 'stubs' . DIRECTORY_SEPARATOR . 'controller.stub');
+            $content = $this->stub_replace($stub, 'Index', $namespace);
             $this->checkDirBuild(dirname($filename));
-
             file_put_contents($filename, $content);
         }
     }
@@ -171,6 +198,34 @@ class App extends Build
             if (!is_file($appPath . $name . '.php')) {
                 file_put_contents($appPath . $name . '.php', "<?php" . PHP_EOL . "// 这是系统自动生成的{$name}定义文件" . PHP_EOL . "return [" . PHP_EOL . PHP_EOL . "];" . PHP_EOL);
             }
+        }
+    }
+
+    /**
+     * 创建应用的公共文件
+     * @access protected
+     * @param  string $app 目录
+     * @return void
+     */
+    protected function buildApidoc(string $app): void
+    {
+        $filename = $this->basePath . ($app ? $app . DIRECTORY_SEPARATOR : '') . 'apidoc.json';
+        if (!is_file($filename)) {
+            $stub = file_get_contents(__DIR__ . DIRECTORY_SEPARATOR . 'stubs' . DIRECTORY_SEPARATOR . 'apidoc.json.stub');
+            $content = str_replace(['{%appName%}'], [ucfirst($app)], $stub);
+            file_put_contents($filename, $content);
+        }
+
+        $filename = $this->basePath . ($app ? $app . DIRECTORY_SEPARATOR : '') . 'apidoc.md';
+        if (!is_file($filename)) {
+            $stub = file_get_contents(__DIR__ . DIRECTORY_SEPARATOR . 'stubs' . DIRECTORY_SEPARATOR . 'apidoc.md.stub');;
+            file_put_contents($filename, $stub);
+        }
+
+        $filename = $this->basePath . ($app ? $app . DIRECTORY_SEPARATOR : '') . 'apidoc.php';
+        if (!is_file($filename)) {
+            $stub = file_get_contents(__DIR__ . DIRECTORY_SEPARATOR . 'stubs' . DIRECTORY_SEPARATOR . 'apidoc.stub');
+            file_put_contents($filename, $stub);
         }
     }
 

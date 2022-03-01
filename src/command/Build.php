@@ -49,18 +49,28 @@ abstract class Build extends Command
         $output->writeln('<info>' . $this->type . ':' . $classname . ' created successfully.</info>');
     }
 
-    protected function buildClass(string $name)
+    protected function buildClass(string $name, string $stubPath = null)
     {
-        $stub = file_get_contents($this->getStub());
+        if(empty($stubPath)){
+            $stub = file_get_contents($this->getStub());
+        }else{
+            $stub = file_get_contents($stubPath);
+        }
 
         $namespace = trim(implode('\\', array_slice(explode('\\', $name), 0, -1)), '\\');
 
         $class = str_replace($namespace . '\\', '', $name);
 
-        return str_replace(['{%className%}', '{%actionSuffix%}', '{%namespace%}', '{%app_namespace%}'], [
+        return $this->stub_replace($stub, $class, $namespace);
+
+    }
+
+    protected function stub_replace(string $stub, string $class, string $namespace)
+    {
+        return str_replace(['{%className%}',  '{%namespace%}', '{%actionSuffix%}', '{%app_namespace%}'], [
             $class,
-            $this->app->config->get('route.action_suffix'),
             $namespace,
+            $this->app->config->get('route.action_suffix'),
             $this->app->getNamespace(),
         ], $stub);
     }

@@ -23,7 +23,7 @@ class Controller extends Build
     {
         parent::configure();
         $this->setName('build:controller')
-            ->addOption('api', null, Option::VALUE_NONE, 'Generate an api controller class.')
+            ->addOption('apidoc', null, Option::VALUE_NONE, 'Generate an api controller class.')
             ->addOption('plain', null, Option::VALUE_NONE, 'Generate an empty controller class.')
             ->setDescription('Create a new resource controller class');
     }
@@ -32,8 +32,8 @@ class Controller extends Build
     {
         $stubPath = __DIR__ . DIRECTORY_SEPARATOR . 'stubs' . DIRECTORY_SEPARATOR;
 
-        if ($this->input->getOption('api')) {
-            return $stubPath . 'controller.api.stub';
+        if ($this->input->getOption('apidoc')) {
+            return $stubPath . 'controller.apidoc.stub';
         }
 
         if ($this->input->getOption('plain')) {

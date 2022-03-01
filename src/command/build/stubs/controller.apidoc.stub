@@ -7,7 +7,7 @@ use start\Controller;
 
 class {%className%} extends Controller
 {
-   /**
+    /**
      * 查看记录
      * @auth
      */

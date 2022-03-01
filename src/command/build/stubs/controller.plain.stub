@@ -3,7 +3,9 @@ declare (strict_types = 1);
 
 namespace {%namespace%};
 
-class {%className%}
+use start\Controller;
+
+class {%className%} extends Controller
 {
     //
 }
