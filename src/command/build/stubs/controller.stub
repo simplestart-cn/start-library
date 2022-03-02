@@ -1,9 +1,17 @@
 <?php
 declare (strict_types = 1);
+// +----------------------------------------------------------------------
+// | Generate By SimpleStart
+// +----------------------------------------------------------------------
+// | Github: https://github.com/simplestart-cn/start-library
+// +----------------------------------------------------------------------
+// | Copyright (c) http://www.simplestart.cn All rights reserved.
+// +----------------------------------------------------------------------
 
 namespace {%namespace%};
 
 use start\Controller;
+use app\{%appName%}\service\{%className%}Service;
 
 class {%className%} extends Controller
 {
@@ -13,16 +21,31 @@ class {%className%} extends Controller
      */
     public function page()
     {
-        // 分页接口
+        $input = $this->formValidate([
+            'keyword.default' => '',
+        ]);
+        if(!empty($input['keyword'])){
+            $input['title'] = ['like', '%'.$input['keyword'].'%'];
+        }
+        $data = {%className%}Service::getPage($input);
+        $this->success($data);
     }
 
     /**
-     * 获取记录
+     * 获取列表
      * @admin
      */
-    function list()
+    public function list()
     {
-        // 不分页接口
+        $input = $this->formValidate([
+            'keyword.default' => '',
+            'status.value'    => 1,
+        ]);
+        if(!empty($input['keyword'])){
+            $input['title'] = ['like', '%'.$input['keyword'].'%'];
+        }
+        $data = {%className%}Service::getList($input);
+        $this->success($data);
     }
 
     /**
@@ -31,7 +54,11 @@ class {%className%} extends Controller
      */
     public function info()
     {
-
+        $input = $this->formValidate([
+            'id.require' => 'id不能为空'
+        ]);
+        $model = {%className%}Service::getInfo($input['id']);
+        $this->success($model);
     }
 
     /**
@@ -40,7 +67,13 @@ class {%className%} extends Controller
      */
     public function create()
     {
-
+        $input = $this->formValidate([]);
+        $model = {%className%}Service::create($input);
+        if ($model) {
+            $this->success('操作成功', $model);
+        } else {
+            $this->error('操作失败');
+        }
     }
 
     /**
@@ -49,16 +82,19 @@ class {%className%} extends Controller
      */
     public function update()
     {
-
-    }
-
-    /**
-     * 批量更新
-     * @auth
-     */
-    public function updateList()
-    {
-
+        $input = $this->formValidate([
+            'id.require' => 'id不能为空',
+            'title.require|ifexist' => '名称不能为空',
+            'name.default' => null,
+            'sort.default' => null,
+            'status.default' => null
+        ]);
+        $model = {%className%}Service::update($input);
+        if ($model) {
+            $this->success('操作成功', $model);
+        } else {
+            $this->error('操作失败');
+        }
     }
 
     /**
@@ -67,6 +103,53 @@ class {%className%} extends Controller
      */
     public function remove()
     {
-        
+        $input = $this->formValidate([
+            'id.require' => 'id不能为空',
+        ]);
+        if ({%className%}Service::remove($input['id'])) {
+            $this->success('操作成功');
+        } else {
+            $this->error('操作失败');
+        }
     }
+
+    /**
+     * 更新状态
+     * @auth
+     */
+    public function updateStatus()
+    {
+        $input = $this->formValidate([
+            'id.require'     => 'id不能为空',
+            'status.require' => 'status不能为空'
+        ], true);
+        if ({%className%}Service::update($input)) {
+            $this->success('操作成功');
+        } else {
+            $this->error('操作失败');
+        }
+    }
+
+    /**
+     * 更新列表
+     * @auth
+     */
+    public function updateList()
+    {
+        $input = $this->formValidate([
+            'list.require' => 'list不能为空',
+        ]);
+        foreach ($input['list'] as $item) {
+            if (!isset($item['id']) || empty($item['id'])) {
+                throw_error('list项目id不能为空');
+            }
+        }
+        $res = {%className%}Service::model()->allowField(['status'])->saveAll($input['list']);
+        if ($res) {
+            $this->success('操作成功');
+        } else {
+            $this->error('操作失败');
+        }
+    }
+
 }

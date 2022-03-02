@@ -1,14 +1,21 @@
 <?php
 declare (strict_types = 1);
+// +----------------------------------------------------------------------
+// | Generate By SimpleStart
+// +----------------------------------------------------------------------
+// | Github: https://github.com/simplestart-cn/start-library
+// +----------------------------------------------------------------------
+// | Copyright (c) http://www.simplestart.cn All rights reserved.
+// +----------------------------------------------------------------------
 
 namespace {%namespace%};
 
-use think\Model;
+use start\Model;
 
 /**
- * @mixin \think\Model
+ * @mixin \start\Model
  */
 class {%className%} extends Model
 {
-    //
+    protected $name = "";
 }

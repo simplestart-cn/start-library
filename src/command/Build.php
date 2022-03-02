@@ -18,6 +18,7 @@ use think\console\Output;
 
 abstract class Build extends Command
 {
+    
     protected $type;
 
     abstract protected function getStub();
@@ -30,6 +31,8 @@ abstract class Build extends Command
     protected function execute(Input $input, Output $output)
     {
         $name = trim($input->getArgument('name'));
+
+        $appname = $this->getAppName($name);
 
         $classname = $this->getClassName($name);
 
@@ -44,12 +47,12 @@ abstract class Build extends Command
             mkdir(dirname($pathname), 0755, true);
         }
 
-        file_put_contents($pathname, $this->buildClass($classname));
+        file_put_contents($pathname, $this->buildClass($appname, $classname));
 
         $output->writeln('<info>' . $this->type . ':' . $classname . ' created successfully.</info>');
     }
 
-    protected function buildClass(string $name, string $stubPath = null)
+    protected function buildClass(string $app, string $name)
     {
         if(empty($stubPath)){
             $stub = file_get_contents($this->getStub());
@@ -61,13 +64,14 @@ abstract class Build extends Command
 
         $class = str_replace($namespace . '\\', '', $name);
 
-        return $this->stub_replace($stub, $class, $namespace);
+        return $this->stub_replace($stub, $app, $class, $namespace);
 
     }
 
-    protected function stub_replace(string $stub, string $class, string $namespace)
+    protected function stub_replace(string $stub, string $app, string $class, string $namespace)
     {
-        return str_replace(['{%className%}',  '{%namespace%}', '{%actionSuffix%}', '{%app_namespace%}'], [
+        return str_replace(['{%appName%}', '{%className%}',  '{%namespace%}', '{%actionSuffix%}', '{%app_namespace%}'], [
+            $app,
             $class,
             $namespace,
             $this->app->config->get('route.action_suffix'),
@@ -80,6 +84,16 @@ abstract class Build extends Command
         $name = str_replace('app\\', '', $name);
 
         return $this->app->getBasePath() . ltrim(str_replace('\\', '/', $name), '/') . '.php';
+    }
+
+    protected function getAppName(string $name): string
+    {
+        if (strpos($name, '@')) {
+            [$app, $name] = explode('@', $name);
+        } else {
+            $app = '';
+        }
+        return $app;
     }
 
     protected function getClassName(string $name): string

@@ -19,6 +19,7 @@ use think\console\input\Option;
 
 class App extends Build
 {
+    
     /**
      * 应用基础目录
      * @var string
@@ -80,7 +81,6 @@ class App extends Build
 
         // 创建应用目录
         if (!is_dir($this->basePath . $app)) {
-            
             mkdir($this->basePath . $app);
         }
 
@@ -131,15 +131,15 @@ class App extends Build
                                 $class    = $val . 'Controller';
                             }
                             $stub = file_get_contents(__DIR__ . DIRECTORY_SEPARATOR . 'stubs' . DIRECTORY_SEPARATOR . 'controller.stub');
-                            $content = $this->stub_replace($stub, $class, $space);
+                            $content = $this->stub_replace($stub, $app, $class, $space);
                             break;
                         case 'service': // 服务
                             $stub = file_get_contents(__DIR__ . DIRECTORY_SEPARATOR . 'stubs' . DIRECTORY_SEPARATOR . 'service.stub');
-                            $content = $this->stub_replace($stub, $class, $space);
+                            $content = $this->stub_replace($stub, $app, $class, $space);
                             break;
                         case 'model': // 模型
                             $stub = file_get_contents(__DIR__ . DIRECTORY_SEPARATOR . 'stubs' . DIRECTORY_SEPARATOR . 'model.stub');
-                            $content = $this->stub_replace($stub, $class, $space);
+                            $content = $this->stub_replace($stub, $app, $class, $space);
                             break;
                         case 'view': // 视图
                             $sufixx = $this->app->config->get('view.view_suffix');
@@ -174,7 +174,7 @@ class App extends Build
 
         if (!is_file($filename)) {
             $stub = file_get_contents(__DIR__ . DIRECTORY_SEPARATOR . 'stubs' . DIRECTORY_SEPARATOR . 'controller.stub');
-            $content = $this->stub_replace($stub, 'Index', $namespace);
+            $content = $this->stub_replace($stub, $app, 'Index', $namespace . '\controller');
             $this->checkDirBuild(dirname($filename));
             file_put_contents($filename, $content);
         }
