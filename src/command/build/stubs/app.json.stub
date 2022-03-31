@@ -13,7 +13,7 @@
     "developer": "开发者手册"
   },
   "dependencies": ["其他应用依赖"],
-  "start-admin": {
+  "startcms": {
     "version": "1.0.0"
   },
   "menu": []

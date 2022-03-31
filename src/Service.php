@@ -120,8 +120,8 @@ abstract class Service
     /**
      * 获取列表
      * @param  array  $filter [description]
-     * @param  array  $order [description]
-     * @return [type]         [description]
+     * @param  array  $order  [description]
+     * @return collection     [description]
      */
     public static function getList($filter = [], $order = [], $with = null)
     {
@@ -132,8 +132,8 @@ abstract class Service
     /**
      * 获取分页
      * @param  array  $filter [description]
-     * @param  array  $order [description]
-     * @return [type]         [description]
+     * @param  array  $order  [description]
+     * @return collection     [description]
      */
     public static function getPage($filter = [], $order = [], $with = null)
     {
@@ -154,13 +154,13 @@ abstract class Service
 
     /**
      * 创建记录
-     * @param  [type] $input [description]
-     * @return [type]        [description]
+     * @param  array  $input [description]
+     * @return object        [description]
      */
     public static function create($input)
     {
         $model = self::model();
-        if ($model->save(self::inputFilter($input))) {
+        if ($model->save($input)) {
             return $model;
         } else {
             throw_error('create fail');
@@ -169,8 +169,8 @@ abstract class Service
 
     /**
      * 更新记录
-     * @param  [type] $input [description]
-     * @return [type]        [description]
+     * @param  array  $input [description]
+     * @return object        [description]
      */
     public static function update($input)
     {
@@ -180,7 +180,7 @@ abstract class Service
             throw_error("$pk can not empty");
         }
         $model = $model->find($input[$pk]);
-        if ($model->save(self::inputFilter($input))) {
+        if ($model->save($input)) {
             return $model;
         } else {
             throw_error('update fail');
@@ -188,25 +188,64 @@ abstract class Service
     }
 
     /**
-     * 过滤自动更新字段
+     * 批量更新
+     * @param array $list
+     * @param array $allowField
+     * @return Collection
      */
-    private static function inputFilter($input)
+    public static function saveAll(array $list, array $allow_field = [])
     {
-        if (isset($input['create_time'])) {
-            unset($input['create_time']);
+        if(!empty($allow_field)){
+            return self::model()->allowField($allow_field)->saveAll($list);
+        }else{
+            return self::model()->saveAll($list);
         }
+    }
 
-        if (isset($input['update_time'])) {
-            unset($input['update_time']);
+    /**
+     * 导入记录
+     * @param  array $list   [导入列表]
+     * @param  array $keys   [查重字段]
+     * @return array         [成功及失败数量]
+     */
+    public static function import(array $list, array $keys=[])
+    {
+        if (!is_array($list)) {
+            $list = json_decode($list, true);
         }
-
-        return $input;
+        $success = 0; // 成功记录数
+        $error   = 0; // 失败记录数
+        self::startTrans();
+        try {
+            foreach ($list as $item) {
+                $where = array_reduce($keys, function ($result, $key) use ($item) {
+                    if(isset($item[$key])){
+                        return array_merge($result, [$key => $item[$key]]);
+                    }
+                    return $result;
+                }, []);
+                $model = self::getInfo($where);
+                if ($model) {
+                    $item['is_deleted'] = 0;
+                    $model->save($item) ? $success++ : $error++;
+                } else {
+                    $model = self::model();
+                    $model->save($item) ? $success++ : $error++;
+                }
+            }
+            self::startCommit();
+            return compact('success', 'error');
+        } catch (\Exception $e) {
+            self::startRollback();
+            throw_error($e->getMessage());
+            return false;
+        }
     }
 
     /**
      * 删除记录
-     * @param  [type] $filter [description]
-     * @return [type]         [description]
+     * @param  array  $filter [description]
+     * @return boolean         [description]
      */
     public static function remove($filter)
     {

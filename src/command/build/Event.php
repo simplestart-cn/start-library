@@ -28,8 +28,4 @@ class Event extends Build
         return __DIR__ . DIRECTORY_SEPARATOR . 'stubs' . DIRECTORY_SEPARATOR . 'event.stub';
     }
 
-    protected function getNamespace(string $app): string
-    {
-        return parent::getNamespace($app) . '\\event';
-    }
 }

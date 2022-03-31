@@ -102,7 +102,7 @@ class Install extends Command
 
     protected function installFile()
     {
-        $data = AppService::instance()->grenerateDifference($this->rules, $this->ignore);
+        $data = AppService::instance()->generateDifference($this->rules, $this->ignore);
         if (empty($data)) $this->output->writeln('No need to update the file if the file comparison is consistent');
         else foreach ($data as $file) {
             list($state, $mode, $name) = AppService::instance()->fileSynchronization($file);

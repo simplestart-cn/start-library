@@ -1,9 +1,10 @@
 <?php
-declare (strict_types = 1);
+
+declare(strict_types=1);
 // +----------------------------------------------------------------------
 // | Generate By SimpleStart
 // +----------------------------------------------------------------------
-// | Github: https://github.com/simplestart-cn/start-library
+// | Github: https://github.com/simplestart-cn/start-think
 // +----------------------------------------------------------------------
 // | Copyright (c) http://www.simplestart.cn All rights reserved.
 // +----------------------------------------------------------------------
@@ -36,11 +37,11 @@ class {%className%} extends Controller
         $input = $this->formValidate([
             'keyword.default' => '',
         ]);
-        if(!empty($input['keyword'])){
-            $input['title'] = ['like', '%'.$input['keyword'].'%'];
+        if (!empty($input['keyword'])) {
+            $input['title'] = ['like', '%' . $input['keyword'] . '%'];
         }
-        $data = UserService::getPage($input);
-        $this->success($data);
+        $list = {%className%}Service::getPage($input);
+        $this->success($list);
     }
 
     /**
@@ -65,11 +66,11 @@ class {%className%} extends Controller
             'keyword.default' => '',
             'status.value'    => 1,
         ]);
-        if(!empty($input['keyword'])){
-            $input['title'] = ['like', '%'.$input['keyword'].'%'];
+        if (!empty($input['keyword'])) {
+            $input['title'] = ['like', '%' . $input['keyword'] . '%'];
         }
-        $data = UserService::getList($input);
-        $this->success($data);
+        $list = {%className%}Service::getList($input);
+        $this->success($list);
     }
 
     /**
@@ -92,7 +93,7 @@ class {%className%} extends Controller
         $input = $this->formValidate([
             'id.require' => 'id不能为空'
         ]);
-        $model = UserService::getInfo($input['id']);
+        $model = {%className%}Service::getInfo($input['id']);
         $this->success($model);
     }
 
@@ -118,7 +119,7 @@ class {%className%} extends Controller
         $input = $this->formValidate([
             'title.require' => '名称不能为空',
         ]);
-        $model = UserService::create($input);
+        $model = {%className%}Service::create($input);
         if ($model) {
             $this->success('操作成功', $model);
         } else {
@@ -130,8 +131,8 @@ class {%className%} extends Controller
      * 更新记录
      * @auth
      * 
-     * @api            {post}    {%className%}/udpate            更新记录
-     * @apiName        udpate
+     * @api            {post}    {%className%}/update            更新记录
+     * @apiName        update
      * @apiGroup       {%className%}
      * @apiVersion     v1.0.0
      * @apiDescription 更新记录
@@ -150,7 +151,7 @@ class {%className%} extends Controller
             'id.require'            => 'id不能为空',
             'title.require|ifexist' => '名称不能为空'
         ]);
-        $model = UserService::update($input);
+        $model = {%className%}Service::update($input);
         if ($model) {
             $this->success('操作成功', $model);
         } else {
@@ -178,7 +179,7 @@ class {%className%} extends Controller
         $input = $this->formValidate([
             'id.require' => 'id不能为空',
         ]);
-        if (UserService::remove($input['id'])) {
+        if ({%className%}Service::remove($input['id'])) {
             $this->success('操作成功');
         } else {
             $this->error('操作失败');
@@ -207,7 +208,7 @@ class {%className%} extends Controller
             'id.require'     => 'id不能为空',
             'status.require' => 'status不能为空'
         ], true);
-        if (UserService::update($input)) {
+        if ({%className%}Service::update($input)) {
             $this->success('操作成功');
         } else {
             $this->error('操作失败');
@@ -215,14 +216,14 @@ class {%className%} extends Controller
     }
 
     /**
-     * 更新列表
+     * 批量更新
      * @auth
      * 
-     * @api            {post}    {%className%}/updateList           更新列表
+     * @api            {post}    {%className%}/updateList           批量更新
      * @apiName        updateList
      * @apiGroup       {%className%}
      * @apiVersion     v1.0.0
-     * @apiDescription 更新列表
+     * @apiDescription 批量更新
      * @apiUse         CommonHeader
      * @apiUse         CommonParam
      * @apiParam       {array}              list           列表数据,item项主键不能为空
@@ -236,15 +237,97 @@ class {%className%} extends Controller
         ]);
         foreach ($input['list'] as $item) {
             if (!isset($item['id']) || empty($item['id'])) {
-                throw_error('list项目id不能为空');
+                throw_error('item主键id不能为空');
             }
         }
-        $res = UserService::model()->allowField(['status'])->saveAll($input['list']);
-        if ($res) {
+        if ({%className%}Service::saveAll($input['list'], ['status'])) {
             $this->success('操作成功');
         } else {
             $this->error('操作失败');
         }
     }
 
+    /**
+     * 批量删除
+     * @auth
+     * 
+     * @api            {post}    {%className%}/removeList           批量删除
+     * @apiName        removeList
+     * @apiGroup       {%className%}
+     * @apiVersion     v1.0.0
+     * @apiDescription 批量删除
+     * @apiUse         CommonHeader
+     * @apiUse         CommonParam
+     * @apiParam       {array}              list           ids数据
+     * @apiUse         CommonSuccess
+     * @apiUse         CommonError
+     */
+    public function removeList()
+    {
+        $input = $this->formValidate([
+            'list.require' => 'list不能为空',
+        ], true);
+        if ({%className%}Service::remove($input['list'])) {
+            $this->success('操作成功');
+        } else {
+            $this->error('操作失败');
+        }
+    }
+
+    /**
+     * 批量导入
+     * @auth
+     *
+     * @api            {post}    {%className%}/importList         批量导入
+     * @apiName        importList
+     * @apiGroup       {%className%}
+     * @apiVersion     v1.0.0
+     * @apiDescription 批量导入
+     * @apiUse         CommonHeader
+     * @apiUse         CommonParam
+     * @apiParam       {array}              list             列表数据,item项名称不能为空
+     * @apiUse         CommonSuccess
+     * @apiUse         CommonError
+     */
+    public function importList()
+    {
+        $input = $this->formValidate([
+            'list.require' => 'list不能为空',
+        ]);
+        $data = {%className%}Service::import($input['list'], ['title']);
+        if ($data) {
+            $this->success('操作成功', $data);
+        } else {
+            $this->error('操作失败');
+        }
+    }
+
+    /**
+     * 批量导出
+     * @auth
+     *
+     * @api            {post}    {%className%}/exportList         批量导出
+     * @apiName        exportList
+     * @apiGroup       {%className%}
+     * @apiVersion     v1.0.0
+     * @apiDescription 批量导出
+     * @apiUse         CommonHeader
+     * @apiUse         CommonParam
+     * @apiParam       {string}        [keyword]            名称
+     * @apiUse         CommonSuccess
+     * @apiUse         CommonError
+     */
+    public function exportList()
+    {
+        $input = $this->formValidate([
+            'keyword.default'  => '',
+            'status.value'     => 1,
+            'per_page.default' => 2000
+        ]);
+        if (!empty($input['keyword'])) {
+            $input['title'] = ['like', '%' . $input['keyword'] . '%'];
+        }
+        $data = {%className%}Service::getPage($input);
+        $this->success($data['data']);
+    }
 }

@@ -523,7 +523,7 @@ class AppService extends Service
      * @param array $ignore 忽略规则
      * @return array
      */
-    public function grenerateDifference($rules = [], $ignore = [])
+    public function generateDifference($rules = [], $ignore = [])
     {
         list($this->rules, $this->ignore, $data) = [$rules, $ignore, []];
         $result                                  = json_decode(HttpExtend::post("{$this->uri}?/appstore/upgrade/tree", [
@@ -531,7 +531,7 @@ class AppService extends Service
         ]), true);
         if (!empty($result['code'])) {
             $new = $this->getAppFiles($result['data']['rules'], $result['data']['ignore']);
-            foreach ($this->grenerateDifferenceContrast($result['data']['list'], $new['list']) as $file) {
+            foreach ($this->generateDifferenceContrast($result['data']['list'], $new['list']) as $file) {
                 if (in_array($file['type'], ['add', 'del', 'mod'])) {
                     foreach ($this->rules as $rule) {
                         if (stripos($file['name'], $rule) === 0) {
@@ -552,7 +552,7 @@ class AppService extends Service
      * @param array $local 本地文件列表信息
      * @return array
      */
-    private function grenerateDifferenceContrast(array $serve = [], array $local = [])
+    private function generateDifferenceContrast(array $serve = [], array $local = [])
     {
         // 数据扁平化
         list($_serve, $_local, $_new) = [[], [], []];

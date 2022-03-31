@@ -42,15 +42,5 @@ class Controller extends Build
 
         return $stubPath . 'controller.stub';
     }
-
-    protected function getClassName(string $name): string
-    {
-        return parent::getClassName($name) . ($this->app->config->get('route.controller_suffix') ? 'Controller' : '');
-    }
-
-    protected function getNamespace(string $app): string
-    {
-        return parent::getNamespace($app) . '\\controller';
-    }
-
+    
 }

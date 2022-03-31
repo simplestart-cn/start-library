@@ -173,8 +173,8 @@ class App extends Build
         $filename = $this->basePath . ($app ? $app . DIRECTORY_SEPARATOR : '') . 'controller' . DIRECTORY_SEPARATOR . 'Index' . $suffix . '.php';
 
         if (!is_file($filename)) {
-            $stub = file_get_contents(__DIR__ . DIRECTORY_SEPARATOR . 'stubs' . DIRECTORY_SEPARATOR . 'controller.stub');
-            $content = $this->stub_replace($stub, $app, 'Index', $namespace . '\controller');
+            $stub = file_get_contents(__DIR__ . DIRECTORY_SEPARATOR . 'stubs' . DIRECTORY_SEPARATOR . 'controller.plain.stub');
+            $content = $this->stub_replace($app, $namespace . '\controller', 'Index', $stub);
             $this->checkDirBuild(dirname($filename));
             file_put_contents($filename, $content);
         }

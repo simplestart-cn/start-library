@@ -180,9 +180,9 @@ abstract class Controller extends \stdClass
 
     /**
      * 快捷输入并验证（ 支持 规则 # 别名 ）
-     * @param array  $rules   验证规则（ 验证信息数组 ）
-     * @param string $strict  严格模式  ( 过滤未验证参数 )
-     * @param string $type    输入方式  ( post. 或 get. )
+     * @param array  $rules   验证规则(验证信息数组)
+     * @param string $strict  严格模式(过滤未验证参数 )
+     * @param string $type    输入方式(post或get)
      * @return array
      */
     protected function formValidate(array $rules=[], $strict = false, $type = '')

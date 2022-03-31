@@ -3,7 +3,7 @@ declare (strict_types = 1);
 // +----------------------------------------------------------------------
 // | Generate By SimpleStart
 // +----------------------------------------------------------------------
-// | Github: https://github.com/simplestart-cn/start-library
+// | Github: https://github.com/simplestart-cn/start-think
 // +----------------------------------------------------------------------
 // | Copyright (c) http://www.simplestart.cn All rights reserved.
 // +----------------------------------------------------------------------
@@ -14,5 +14,5 @@ use start\Controller;
 
 class {%className%} extends Controller
 {
-    //
+    // SimpleStart !
 }

@@ -47,6 +47,7 @@ class Library extends Service
             'start\command\Version',
             'start\command\Database',
             'start\command\build\App',
+            'start\command\build\Cms',
             'start\command\build\Model',
             'start\command\build\Service',
             'start\command\build\Controller'

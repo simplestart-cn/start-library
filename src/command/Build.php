@@ -19,7 +19,9 @@ use think\console\Output;
 abstract class Build extends Command
 {
     
-    protected $type;
+    protected $type = '';
+    protected $input = null;
+    protected $output = null;
 
     abstract protected function getStub();
 
@@ -30,60 +32,55 @@ abstract class Build extends Command
 
     protected function execute(Input $input, Output $output)
     {
+        $this->input = $input;
+        $this->output = $output;
+
         $name = trim($input->getArgument('name'));
 
         $appname = $this->getAppName($name);
 
+        $namespace = $this->getNamespace($name);
+
         $classname = $this->getClassName($name);
 
-        $pathname = $this->getPathName($classname);
+        $classpath = $this->getClassPath($namespace, $classname);
+        
+        $this->buildClass($appname, $namespace, $classname, $classpath);
+    }
 
-        if (is_file($pathname)) {
-            $output->writeln('<error>' . $this->type . ':' . $classname . ' already exists!</error>');
+    public function buildClass(string $app, string $namespace, string $classname, string $classpath,  string $stub = '')
+    {
+        if (!is_dir(dirname($classpath))) {
+            mkdir(dirname($classpath), 0755, true);
+        }
+
+        if (is_file($classpath)) {
+            $this->output->writeln('<error>' . $this->type . ':' . $classpath . ' already exists!</error>');
             return false;
         }
 
-        if (!is_dir(dirname($pathname))) {
-            mkdir(dirname($pathname), 0755, true);
-        }
-
-        file_put_contents($pathname, $this->buildClass($appname, $classname));
-
-        $output->writeln('<info>' . $this->type . ':' . $classname . ' created successfully.</info>');
-    }
-
-    protected function buildClass(string $app, string $name)
-    {
-        if(empty($stubPath)){
+        if(empty($stub)){
             $stub = file_get_contents($this->getStub());
         }else{
-            $stub = file_get_contents($stubPath);
+            $stub = file_get_contents($stub);
         }
 
-        $namespace = trim(implode('\\', array_slice(explode('\\', $name), 0, -1)), '\\');
+        $content =  $this->stub_replace($app,  $namespace, $classname, $stub);
 
-        $class = str_replace($namespace . '\\', '', $name);
+        file_put_contents($classpath, $content);
 
-        return $this->stub_replace($stub, $app, $class, $namespace);
-
+        $this->output->writeln('<info>' . $this->type . ':' . $classpath . ' created successfully.</info>');
     }
 
-    protected function stub_replace(string $stub, string $app, string $class, string $namespace)
+    protected function stub_replace(string $app,  string $namespace, string $classname, string $stub)
     {
-        return str_replace(['{%appName%}', '{%className%}',  '{%namespace%}', '{%actionSuffix%}', '{%app_namespace%}'], [
+        return str_replace(['{%appName%}', '{%namespace%}', '{%className%}', '{%actionSuffix%}', '{%app_namespace%}'], [
             $app,
-            $class,
             $namespace,
+            $classname,
             $this->app->config->get('route.action_suffix'),
             $this->app->getNamespace(),
         ], $stub);
-    }
-
-    protected function getPathName(string $name): string
-    {
-        $name = str_replace('app\\', '', $name);
-
-        return $this->app->getBasePath() . ltrim(str_replace('\\', '/', $name), '/') . '.php';
     }
 
     protected function getAppName(string $name): string
@@ -98,26 +95,40 @@ abstract class Build extends Command
 
     protected function getClassName(string $name): string
     {
-        if (strpos($name, '\\') !== false) {
-            return $name;
-        }
-
         if (strpos($name, '@')) {
             [$app, $name] = explode('@', $name);
         } else {
             $app = '';
         }
-
         if (strpos($name, '/') !== false) {
             $name = str_replace('/', '\\', $name);
         }
+        
+        $sub = trim(implode('\\', array_slice(explode('\\', $name), 0, -1)), '\\');
 
-        return $this->getNamespace($app) . '\\' . $name;
+        return  ucfirst(str_replace($sub . '\\', '', $name));
     }
 
-    protected function getNamespace(string $app): string
+    protected function getClassPath(string $namespace, string $classname): string
     {
-        return 'app' . ($app ? '\\' . $app : '');
+        $namespace = str_replace('app\\', '', $namespace);
+        $classpath = ltrim(str_replace('\\', DIRECTORY_SEPARATOR, $namespace), DIRECTORY_SEPARATOR) .DIRECTORY_SEPARATOR . $classname . '.php';
+        return $this->app->getBasePath() . $classpath;
+    }
+
+    protected function getNamespace(string $name, string $type = ''): string
+    {
+        $type = $type ? $type : $this->type;
+        if (strpos($name, '@')) {
+            [$app, $name] = explode('@', $name);
+        } else {
+            $app = '';
+        }
+        if (strpos($name, '/') !== false) {
+            $name = str_replace('/', '\\', $name);
+        }
+        $sub = trim(implode('\\', array_slice(explode('\\', $name), 0, -1)), '\\');
+        return 'app' . ($app ? '\\' . $app : '') . ($type ? '\\' . strtolower($type) : '') . ($sub ? '\\' . strtolower($sub) : '');
     }
 
 }

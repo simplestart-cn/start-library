@@ -29,8 +29,9 @@ class Service extends Build
         return __DIR__ . DIRECTORY_SEPARATOR . 'stubs' . DIRECTORY_SEPARATOR . 'service.stub';
     }
 
-    protected function getNamespace(string $app): string
+    protected function getClassPath(string $namespace, string $classname): string
     {
-        return parent::getNamespace($app) . '\\service';
+        return str_replace('.php', 'Service.php', parent::getClassPath($namespace, $classname));
     }
+
 }

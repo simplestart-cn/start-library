@@ -28,8 +28,4 @@ class Subscribe extends Build
         return __DIR__ . DIRECTORY_SEPARATOR . 'stubs' . DIRECTORY_SEPARATOR . 'subscribe.stub';
     }
 
-    protected function getNamespace(string $app): string
-    {
-        return parent::getNamespace($app) . '\\subscribe';
-    }
 }

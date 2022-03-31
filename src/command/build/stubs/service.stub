@@ -1,9 +1,10 @@
 <?php
-declare (strict_types = 1);
+
+declare(strict_types=1);
 // +----------------------------------------------------------------------
 // | Generate By SimpleStart
 // +----------------------------------------------------------------------
-// | Github: https://github.com/simplestart-cn/start-library
+// | Github: https://github.com/simplestart-cn/start-think
 // +----------------------------------------------------------------------
 // | Copyright (c) http://www.simplestart.cn All rights reserved.
 // +----------------------------------------------------------------------
@@ -12,7 +13,10 @@ namespace {%namespace%};
 
 use start\Service;
 
-class {%className%} extends Service
+/**
+ * @mixin \start\Service
+ */
+class {%className%}Service extends Service
 {
-    public $model = '';
+    public $model = 'app\{%appName%}\model\{%className%}';
 }

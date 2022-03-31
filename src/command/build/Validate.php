@@ -31,9 +31,4 @@ class Validate extends Build
         return $stubPath . 'validate.stub';
     }
 
-    protected function getNamespace(string $app): string
-    {
-        return parent::getNamespace($app) . '\\validate';
-    }
-
 }
