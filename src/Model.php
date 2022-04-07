@@ -29,11 +29,6 @@ class Model extends \think\Model
      * @var boolean
      */
     public $useScope = true;
-    /**
-     * 是否Replace
-     * @var bool
-     */
-    private $replace = false;
 
     /**
      * 关联
@@ -50,13 +45,7 @@ class Model extends \think\Model
     /**
      * 排序
      */
-    protected $order = ['id desc'];
-
-    /**
-     * 只读
-     */
-    protected $readonly = ['create_time', 'update_time'];
-
+    protected $order = [];
 
     /**
      * 数据库配置
@@ -344,6 +333,18 @@ class Model extends \think\Model
     }
 
     /**
+     * 全局查询
+     * 实现db对象链式调用
+     * @param [type] $query
+     * @param array $input
+     * @return void
+     */
+    public function scopeFilter($query, $input = [])
+    {
+        return $this->filter($input, $query);
+    }
+
+    /**
      * 条件查询，支持操作符查询及关联表查询
      * @param  array  $input [description]
      * @return [type]         [description]
@@ -355,6 +356,8 @@ class Model extends \think\Model
      *     'key2' => [1,2,3],
      *     'key3' => ['!=', 1],
      *     'key4' => ['in', [1,2,3]],
+     *     'key5@!='   => 1,
+     *     'key6@like' => "%$keyword%",
      *     'with.key1' => [1,2,3],
      *     'with.key2' => ['like', "%$string%"]
      *     'key1|key2' => value,
@@ -362,14 +365,16 @@ class Model extends \think\Model
      *     'with1.key1|key2' => 
      * ];
      */
-    public function filter($input = [])
+    public function filter($input = [], $query = null)
     {
-        $query = $this;  // 查询对象(Query)
+        $query = $query ?? $this;  // 查询对象(Query)
         $filter = [];
         $hasModel = [];     // 已关联模型
         $hasWhere = false;  // 是否关联查询
         $hasWhereOr = [];   // 关联OR查询
         $hasWhereAnd = [];  // 关联AND查询
+        $options = $query->getOptions();
+        
         if (!$this->useScope) {
             $static = new static();
             $static->useScope = false;
@@ -395,7 +400,7 @@ class Model extends \think\Model
                     continue;
                 }
                 // 过滤非表字段
-                if (!in_array($key, $tableFields) && stripos($key, '|') === false && stripos($key, '.') === false) {
+                if (!in_array($key, $tableFields) && stripos($key, '|') === false && stripos($key, '@') === false && stripos($key, '.') === false) {
                     continue;
                 }
                 // 关联查询
@@ -458,7 +463,7 @@ class Model extends \think\Model
                         }
                     });
                 }
-            }
+            }       
             // 设置别名
             if ($hasWhere) {
                 $query = $query->alias($this->getName());
@@ -503,14 +508,48 @@ class Model extends \think\Model
                 $key = implode('|', $keys);
             }
             if (is_array($value)) {
+                $opera = 'in';
                 if (count($value) > 1 && in_array(strtolower($value[0]), $operator)) {
-                    if ($value[0] == 'like' || $value[0] === 'not like') {
-                        $value[1] = stripos($value[1], '%') === false ? '%' . $value[1] . '%' : $value[1];
-                    }
-                    $query = $logic === 'AND' ? $query->where($table . $key, $value[0], $value[1]) : $query->whereOr($table . $key, $value[0], $value[1]);
-                } else {
-                    $query = $logic === 'AND' ? $query->where($table . $key, 'in', $value) : $query->whereOr($table . $key, 'in', $value);
+                    // 兼容旧版本
+                    $opera = $value[0];
+                    $value = $value[1];
                 }
+                if ($opera === 'like' || $opera === 'not like') {
+                    $value = stripos($value, '%') === false ? '%' . $value . '%' : $value;
+                }
+                $query = $logic === 'AND' ? $query->where($table . $key, $opera, $value) : $query->whereOr($table . $key, $opera, $value);
+            } else if(stripos($key, '|') !== false){
+                // 有点复杂，待优化
+                $keys = explode('|', $key);
+                $query = $logic === 'AND' ? $query->where(function($query) use ($keys, $value){
+                    foreach ($keys as $k) {
+                        $opera = '=';
+                        if(stripos($k, '@') !== false){
+                            list($k, $opera) = explode('@', $k);
+                        }
+                        if ($opera === 'like' || $opera === 'not like') {
+                            $value = stripos($value, '%') === false ? '%' . $value . '%' : $value;
+                        }
+                        $query->whereOr($k, $opera, $value);
+                    }
+                }) : $query->whereOr(function($query) use ($keys, $value){
+                    foreach ($keys as $k) {
+                        $opera = '=';
+                        if(stripos($k, '@') !== false){
+                            list($k, $opera) = explode('@', $k);
+                        }
+                        if ($opera === 'like' || $opera === 'not like') {
+                            $value = stripos($value, '%') === false ? '%' . $value . '%' : $value;
+                        }
+                        $query->whereOr($k, $opera, $value);
+                    }
+                });
+            } else if(stripos($key, '@') !== false){
+                list($key,$opera) = explode('@', $key);
+                if ($opera === 'like' || $opera === 'not like') {
+                    $value = stripos($value, '%') === false ? '%' . $value . '%' : $value;
+                }
+                $query = $logic === 'AND' ? $query->where($table . $key, $opera, $value) : $query->whereOr($table . $key, $opera, $value);
             } else {
                 $query = $logic === 'AND' ? $query->where($table . $key, $value) : $query->whereOr($table . $key, $value);
             }
