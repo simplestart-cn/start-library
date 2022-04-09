@@ -431,6 +431,7 @@ class Model extends \think\Model
                 }
                 $filter[$key] = $value;
             }
+
             // 关联AND查询
             if (!empty($hasWhereAnd)) {
                 $hasWhere = true;
@@ -499,18 +500,10 @@ class Model extends \think\Model
             if (empty($value) && !is_numeric($value)) {
                 continue;
             }
-            // 进行关联查询时需指定|后面的表名
-            if (stripos($key, '|') !== false) {
-                $keys = explode('|', $key);
-                for ($i = 1; $i < count($keys); $i++) {
-                    $keys[$i] = $table . $keys[$i];
-                }
-                $key = implode('|', $keys);
-            }
             if (is_array($value)) {
                 $opera = 'in';
+                // 兼容<1.0.7版本
                 if (count($value) > 1 && in_array(strtolower($value[0]), $operator)) {
-                    // 兼容旧版本
                     $opera = $value[0];
                     $value = $value[1];
                 }
@@ -519,41 +512,41 @@ class Model extends \think\Model
                 }
                 $query = $logic === 'AND' ? $query->where($table . $key, $opera, $value) : $query->whereOr($table . $key, $opera, $value);
             } else if(stripos($key, '|') !== false){
-                // 有点复杂，待优化
                 $keys = explode('|', $key);
-                $query = $logic === 'AND' ? $query->where(function($query) use ($keys, $value){
+                $query = $logic === 'AND' ? $query->where(function($query) use ($table, $keys, $value){
                     foreach ($keys as $k) {
-                        $opera = '=';
-                        if(stripos($k, '@') !== false){
-                            list($k, $opera) = explode('@', $k);
-                        }
-                        if ($opera === 'like' || $opera === 'not like') {
-                            $value = stripos($value, '%') === false ? '%' . $value . '%' : $value;
-                        }
-                        $query->whereOr($k, $opera, $value);
+                        $query = $this->parseFilterItem($query, $table, $k, $value, "OR");
                     }
-                }) : $query->whereOr(function($query) use ($keys, $value){
+                }) : $query->whereOr(function($query) use ($table, $keys, $value){
                     foreach ($keys as $k) {
-                        $opera = '=';
-                        if(stripos($k, '@') !== false){
-                            list($k, $opera) = explode('@', $k);
-                        }
-                        if ($opera === 'like' || $opera === 'not like') {
-                            $value = stripos($value, '%') === false ? '%' . $value . '%' : $value;
-                        }
-                        $query->whereOr($k, $opera, $value);
+                        $query = $this->parseFilterItem($query, $table, $k, $value, "OR");
                     }
                 });
-            } else if(stripos($key, '@') !== false){
-                list($key,$opera) = explode('@', $key);
-                if ($opera === 'like' || $opera === 'not like') {
-                    $value = stripos($value, '%') === false ? '%' . $value . '%' : $value;
-                }
-                $query = $logic === 'AND' ? $query->where($table . $key, $opera, $value) : $query->whereOr($table . $key, $opera, $value);
             } else {
-                $query = $logic === 'AND' ? $query->where($table . $key, $value) : $query->whereOr($table . $key, $value);
+                $query = $this->parseFilterItem($query, $table, $key, $value, $logic);            
             }
         }
         return $query;
+    }
+
+    /**
+     * 解析单个项目
+     * @param object $query
+     * @param string $table
+     * @param string $key
+     * @param string $value
+     * @param string $logic
+     * @return object
+     */
+    private function parseFilterItem($query, $table='', $key, $value, $logic = 'AND')
+    {
+        $opera = '=';
+        if(stripos($key, '@') !== false){
+            list($key, $opera) = explode('@', $key);
+        }
+        if ($opera === 'like' || $opera === 'not like') {
+            $value = stripos($value, '%') === false ? '%' . $value . '%' : $value;
+        }
+        return $logic === 'AND' ? $query->where($table . $key, $opera, $value) : $query->whereOr($table . $key, $opera, $value);   
     }
 }
