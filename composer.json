@@ -1,7 +1,6 @@
 {
     "name": "simplestart/start-library",
     "description": "Simplestart Library For Thinkphp V6.0 ",
-    "version": "v1.1.8",
     "type": "library",
     "license": "Apache-2.0",
     "authors": [
@@ -16,10 +15,7 @@
         "ext-curl": "*",
         "ext-json": "*",
         "ext-iconv": "*",
-        "topthink/framework": "^6.0",
-        "qiniu/php-sdk": "^7.2",
-        "aliyuncs/oss-sdk-php": "^2.3",
-        "qcloud/cos-sdk-v5": "^1.2"
+        "topthink/framework": "^6.0"
     },
     "replace": {
         "topthink/think-multi-app": "^1.0"
